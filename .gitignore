@@ -34,3 +34,9 @@ setup.log
 
 # Local OPAM switch
 _opam/
+
+# emacs
+*~
+
+# vim
+[._]*.sw[a-p]
