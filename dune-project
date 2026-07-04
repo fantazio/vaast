@@ -4,7 +4,7 @@
 
 (generate_opam_files true)
 
-(version 0.0.1)
+(version 0.0.1~design1.2)
 
 (maintainers
  "Corentin De Souza <corentin@fantazio.eu>"
@@ -21,4 +21,5 @@
  (name vaast)
  (synopsis "Typedtree for all versions")
  (license MIT)
+ (depends (ocaml (and (>= 4.14) (< 5))))
 )
