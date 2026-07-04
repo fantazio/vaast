@@ -1,0 +1,5 @@
+(library
+ (public_name vaast)
+ (name vaast)
+ (libraries compiler-libs.common)
+)
