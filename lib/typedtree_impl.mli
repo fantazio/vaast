@@ -23,8 +23,10 @@ val to_pattern : pattern -> OCaml.pattern
 val of_general_pattern : 'k . 'k OCaml.general_pattern -> 'k general_pattern
 val to_general_pattern : 'k . 'k general_pattern -> 'k OCaml.general_pattern
 
-val of_pattern_data : 'a OCaml.pattern_data -> 'a pattern_data
-val to_pattern_data : 'a pattern_data -> 'a OCaml.pattern_data
+val of_pattern_data :
+  of_pat_desc:('a -> 'b) -> 'a OCaml.pattern_data -> 'b pattern_data
+val to_pattern_data :
+  to_pat_desc:('b -> 'a) -> 'b pattern_data -> 'a OCaml.pattern_data
 
 val of_pat_extra : OCaml.pat_extra -> pat_extra
 val to_pat_extra : pat_extra -> OCaml.pat_extra
@@ -131,8 +133,10 @@ val to_module_substitution : module_substitution -> OCaml.module_substitution
 val of_module_type_declaration : OCaml.module_type_declaration -> module_type_declaration
 val to_module_type_declaration : module_type_declaration -> OCaml.module_type_declaration
 
-val of_open_infos : 'a OCaml.open_infos -> 'a open_infos
-val to_open_infos : 'a open_infos -> 'a OCaml.open_infos
+val of_open_infos :
+  of_open_expr:('a -> 'b) -> 'a OCaml.open_infos -> 'b open_infos
+val to_open_infos :
+  to_open_expr:('b -> 'a) -> 'b open_infos -> 'a OCaml.open_infos
 
 val of_open_description : OCaml.open_description -> open_description
 val to_open_description : open_description -> OCaml.open_description
@@ -140,8 +144,10 @@ val to_open_description : open_description -> OCaml.open_description
 val of_open_declaration : OCaml.open_declaration -> open_declaration
 val to_open_declaration : open_declaration -> OCaml.open_declaration
 
-val of_include_infos : 'a OCaml.include_infos -> 'a include_infos
-val to_include_infos : 'a include_infos -> 'a OCaml.include_infos
+val of_include_infos :
+  of_incl_mod:('a -> 'b) -> 'a OCaml.include_infos -> 'b include_infos
+val to_include_infos :
+  to_incl_mod:('b -> 'a) -> 'b include_infos -> 'a OCaml.include_infos
 
 val of_include_description : OCaml.include_description -> include_description
 val to_include_description : include_description -> OCaml.include_description
@@ -227,5 +233,7 @@ val to_class_description : class_description -> OCaml.class_description
 val of_class_type_declaration : OCaml.class_type_declaration -> class_type_declaration
 val to_class_type_declaration : class_type_declaration -> OCaml.class_type_declaration
 
-val of_class_infos : 'a OCaml.class_infos -> 'a class_infos
-val to_class_infos : 'a class_infos -> 'a OCaml.class_infos
+val of_class_infos :
+  of_ci_expr:('a -> 'b) -> 'a OCaml.class_infos -> 'b class_infos
+val to_class_infos :
+  to_ci_expr:('b -> 'a) -> 'b class_infos -> 'a OCaml.class_infos
