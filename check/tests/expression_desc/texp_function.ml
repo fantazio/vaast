@@ -1,0 +1,12 @@
+let _f _ = ()
+let _ = fun _ -> ()
+let _ = function _ -> ()
+
+let _f _ _ = ()
+let _f _ = fun _ -> ()
+let _f _ = function _ -> ()
+let _ = fun _ _ -> ()
+let _ = fun _ -> fun _ -> ()
+let _ = function _ -> fun _ -> ()
+let _ = fun _ -> function _ -> ()
+let _ = function _ -> function _ -> ()
