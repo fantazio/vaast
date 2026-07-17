@@ -1,0 +1,4 @@
+(executable
+ (name bootstrap)
+ (libraries compiler-libs.common vaast)
+)
