@@ -241,9 +241,17 @@ and of_expression_desc : OCaml.expression_desc -> expression_desc = function
       let extension_ctor = of_extension_constructor extension_ctor in
       let in_ = of_expression in_ in
       Texp_letexception { extension_ctor; in_ }
+  #if OCAML_VERSION < (5, 1, 0)
   | Texp_assert expr ->
       let expr = of_expression expr in
-      Texp_assert { expr }
+      let loc = Until_510 NA in
+      Texp_assert { expr; loc }
+  #elif OCAML_VERSION >= (5, 1, 0)
+  | Texp_assert (expr, loc) ->
+      let expr = of_expression expr in
+      let loc = Since_510 loc in
+      Texp_assert { expr; loc }
+  #endif
   | Texp_lazy expr ->
       let expr = of_expression expr in
       Texp_lazy { expr }
@@ -438,6 +446,12 @@ and of_module_expr_desc : OCaml.module_expr_desc -> module_expr_desc = function
       let arg = of_module_expr arg in
       let res_coercion = of_module_coercion res_coercion in
       Tmod_apply { ftor; arg; res_coercion }
+  #if OCAML_VERSION < (5, 1, 0)
+  #elif OCAML_VERSION >= (5, 1, 0)
+  | Tmod_apply_unit ftor ->
+      let ftor = of_module_expr ftor in
+      Tmod_apply_unit { ftor }
+  #endif
   | Tmod_constraint (mod_expr, mod_type, constraint_, coercion) ->
       let mod_expr = of_module_expr mod_expr in
       let constraint_ = of_module_type_constraint constraint_ in
@@ -1051,7 +1065,11 @@ and of_class_infos :
   let ci_id_class = ci.ci_id_class in
   let ci_id_class_type = ci.ci_id_class_type in
   let ci_id_object = ci.ci_id_object in
-  let ci_id_typehash = ci.ci_id_typehash in
+  #if OCAML_VERSION < (5, 1, 0)
+  let ci_id_typehash = Until_510 ci.ci_id_typehash in
+  #elif OCAML_VERSION >= (5, 1, 0)
+  let ci_id_typehash = Since_510 NA in
+  #endif
   let ci_expr = of_ci_expr ci.ci_expr in
   let ci_decl = ci.ci_decl in
   let ci_type_decl = ci.ci_type_decl in
@@ -1315,9 +1333,19 @@ and to_expression_desc : expression_desc -> OCaml.expression_desc = function
       let extension_ctor = to_extension_constructor extension_ctor in
       let in_ = to_expression in_ in
       Texp_letexception (extension_ctor, in_)
-  | Texp_assert { expr } ->
+  | Texp_assert { expr; loc } ->
       let expr = to_expression expr in
+      #if OCAML_VERSION < (5, 1, 0)
+      assert (loc = Until_510 NA);
       Texp_assert expr
+      #elif OCAML_VERSION >= (5, 1, 0)
+      let loc =
+        match loc with
+        | Until_510 _ -> assert false
+        | Since_510 loc -> loc
+      in
+      Texp_assert (expr, loc)
+      #endif
   | Texp_lazy { expr } ->
       let expr = to_expression expr in
       Texp_lazy expr
@@ -1515,6 +1543,14 @@ and to_module_expr_desc : module_expr_desc -> OCaml.module_expr_desc = function
       let arg = to_module_expr arg in
       let res_coercion = to_module_coercion res_coercion in
       Tmod_apply (ftor, arg, res_coercion)
+  | Tmod_apply_unit { ftor } ->
+      #if OCAML_VERSION < (5, 1, 0)
+      ignore ftor; (* remove warning 27 *)
+      assert false
+      #elif OCAML_VERSION >= (5, 1, 0)
+      let ftor = to_module_expr ftor in
+      Tmod_apply_unit ftor
+      #endif
   | Tmod_constraint { mod_expr; mod_type; constraint_; coercion } ->
       let mod_expr = to_module_expr mod_expr in
       let constraint_ = to_module_type_constraint constraint_ in
@@ -2128,7 +2164,15 @@ and to_class_infos :
   let ci_id_class = ci.ci_id_class in
   let ci_id_class_type = ci.ci_id_class_type in
   let ci_id_object = ci.ci_id_object in
-  let ci_id_typehash = ci.ci_id_typehash in
+  #if OCAML_VERSION < (5, 1, 0)
+  let ci_id_typehash =
+    match ci.ci_id_typehash with
+    | Until_510 ci_id_typehash -> ci_id_typehash
+    | Since_510 NA -> assert false
+  in
+  #elif OCAML_VERSION >= (5, 1, 0)
+  assert (ci.ci_id_typehash = Since_510 NA);
+  #endif
   let ci_expr = to_ci_expr ci.ci_expr in
   let ci_decl = ci.ci_decl in
   let ci_type_decl = ci.ci_type_decl in
@@ -2140,7 +2184,10 @@ and to_class_infos :
     ci_id_class;
     ci_id_class_type;
     ci_id_object;
+    #if OCAML_VERSION < (5, 1, 0)
     ci_id_typehash;
+    #elif OCAML_VERSION >= (5, 1, 0)
+    #endif
     ci_expr;
     ci_decl;
     ci_type_decl;

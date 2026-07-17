@@ -26,6 +26,10 @@ type ('until, 'since) ocaml_500 =
   | Until_500 of 'until (** type until 5.0.0 excluded *)
   | Since_500 of 'since (** type since 5.0.0 included *)
 
+type ('until, 'since) ocaml_510 =
+  | Until_510 of 'until (** type until 5.1.0 excluded *)
+  | Since_510 of 'since (** type since 5.1.0 included *)
+
 (* Value expressions for the core language *)
 
 (** [partial] indicates if all pattern cases are accounted for or not
@@ -396,7 +400,8 @@ and expression_desc =
   | Texp_letexception of
       { extension_ctor: extension_constructor; in_: expression }
       (** [let exception C in E] *)
-  | Texp_assert of { expr: expression }
+  | Texp_assert of
+      { expr: expression ; loc: (not_available, Location.t) ocaml_510 }
       (** [assert E] *)
   | Texp_lazy of { expr: expression }
       (** [lazy E] *)
@@ -636,6 +641,10 @@ and module_expr_desc =
   | Tmod_apply of
       { ftor: module_expr; arg: module_expr; res_coercion: module_coercion }
       (** [Mf(Ma)] *)
+  | Tmod_apply_unit of { ftor: module_expr }
+      (** [Mf()]
+          Since OCaml 5.1. Was a Tmod_apply before.
+      *)
   | Tmod_constraint of {
         mod_expr: module_expr;
         mod_type: Types.module_type;
@@ -1175,7 +1184,7 @@ and 'a class_infos = {
   ci_id_class: Ident.t;
   ci_id_class_type: Ident.t;
   ci_id_object: Ident.t;
-  ci_id_typehash: Ident.t;
+  ci_id_typehash: (Ident.t, not_available) ocaml_510;
   ci_expr: 'a;
   ci_decl: Types.class_declaration;
   ci_type_decl: Types.class_type_declaration;
