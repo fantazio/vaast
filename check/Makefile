@@ -1,6 +1,9 @@
-.PHONY: all tests clean
+.PHONY: all bootstrap tests clean
 
-all: tests
+all: tests bootstrap
+
+bootstrap: tests
+	dune exec src/bootstrap.exe tests
 
 tests:
 	make -C tests
