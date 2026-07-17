@@ -1,0 +1,15 @@
+.PHONY: all clean
+
+SRC=$(shell ls *.ml*)
+CMTI=$(SRC:.mli=.cmti) $(SRC:.ml=.cmt)
+
+all: $(CMTI)
+
+%.cmt: %.ml
+	ocamlc -stop-after typing -bin-annot $<
+
+%.cmti: %.mli
+	ocamlc -stop-after typing -bin-annot $<
+
+clean:
+	rm -f *~ *.cm* *.o*
