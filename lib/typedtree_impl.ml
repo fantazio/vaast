@@ -281,7 +281,15 @@ and of_case : 'k . 'k OCaml.case -> 'k case = fun case ->
 and of_record_label_definition :
   OCaml.record_label_definition -> record_label_definition =
   function
-  | Kept type_expr -> Kept { type_expr }
+  #if OCAML_VERSION < (5, 0, 0)
+  |  Kept type_expr ->
+      let mut = Until_500 NA in
+      Kept { type_expr; mut }
+  #elif OCAML_VERSION >= (5, 0, 0)
+  | Kept (type_expr, mut) ->
+      let mut = Since_500 mut in
+      Kept { type_expr; mut }
+  #endif
   | Overridden (longid, expr) ->
       let expr = of_expression expr in
       Overridden { longid; expr }
@@ -1347,7 +1355,18 @@ and to_case : 'k . 'k case -> 'k OCaml.case = fun case ->
 and to_record_label_definition :
   record_label_definition -> OCaml.record_label_definition =
   function
-  | Kept { type_expr } -> Kept type_expr
+    | Kept { type_expr; mut } ->
+      #if OCAML_VERSION < (5, 0, 0)
+        assert (mut = Until_500 NA);
+        Kept type_expr
+      #elif OCAML_VERSION >= (5, 0, 0)
+        let mut =
+          match mut with
+          | Until_500 _ -> assert false
+          | Since_500 mut -> mut
+        in
+        Kept (type_expr, mut)
+      #endif
   | Overridden { longid; expr } ->
       let expr = to_expression expr in
       Overridden (longid, expr)

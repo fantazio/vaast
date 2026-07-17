@@ -2,4 +2,5 @@
  (public_name vaast)
  (name vaast)
  (libraries compiler-libs.common)
+ (preprocess (action (run %{bin:cppo} -V OCAML:%{ocaml_version} %{input-file})))
 )

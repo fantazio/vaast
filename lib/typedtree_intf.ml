@@ -13,6 +13,19 @@
     for the original copyright and license..
 *)
 
+(* Types used for version selection. The types [('unit, 'since) ocaml_XXX] are
+   used to offer version-dependent alternatives on specific elements.
+*)
+
+(** Used within [ocaml_XXX] types to indicate that an element is not available
+ until or since the corresponding version.
+*)
+type not_available = NA
+
+type ('until, 'since) ocaml_500 =
+  | Until_500 of 'until (** type until 5.0.0 excluded *)
+  | Since_500 of 'since (** type since 5.0.0 included *)
+
 (* Value expressions for the core language *)
 
 (** [partial] indicates if all pattern cases are accounted for or not
@@ -427,7 +440,10 @@ and 'k case = {
 }
 
 and record_label_definition =
-  | Kept of { type_expr: Types.type_expr }
+  | Kept of {
+        type_expr: Types.type_expr;
+        mut: (not_available, Asttypes.mutable_flag) ocaml_500;
+      }
   | Overridden of { longid: Longident.t Asttypes.loc; expr: expression }
 
 and binding_op = {

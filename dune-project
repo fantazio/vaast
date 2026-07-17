@@ -21,5 +21,8 @@
  (name vaast)
  (synopsis "Typedtree for all versions")
  (license MIT)
- (depends (ocaml (and (>= 4.14) (< 5))))
+ (depends
+  (ocaml (and (>= 4.14) (< 5.1)))
+  cppo
+ )
 )
