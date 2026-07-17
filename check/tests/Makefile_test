@@ -6,10 +6,10 @@ CMTI=$(SRC:.mli=.cmti) $(SRC:.ml=.cmt)
 all: $(CMTI)
 
 %.cmt: %.ml
-	ocamlc -stop-after typing -bin-annot $<
+	ocamlc -stop-after typing -bin-annot -pp "cppo -V OCAML:`ocamlc -version`" $<
 
 %.cmti: %.mli
-	ocamlc -stop-after typing -bin-annot $<
+	ocamlc -stop-after typing -bin-annot -pp "cppo -V OCAML:`ocamlc -version`" $<
 
 clean:
 	rm -f *~ *.cm* *.o*

@@ -1,3 +1,3 @@
-module F () = struct end
+module F (_ : sig end) = struct end
 
-module _ = F ()
+module _ = F (struct end)
