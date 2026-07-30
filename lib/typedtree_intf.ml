@@ -30,6 +30,10 @@ type ('until, 'since) ocaml_510 =
   | Until_510 of 'until (** type until 5.1.0 excluded *)
   | Since_510 of 'since (** type since 5.1.0 included *)
 
+type ('until, 'since) ocaml_520 =
+  | Until_520 of 'until (** type until 5.2.0 excluded *)
+  | Since_520 of 'since (** type since 5.2.0 included *)
+
 (* Value expressions for the core language *)
 
 (** [partial] indicates if all pattern cases are accounted for or not
@@ -81,12 +85,21 @@ and 'k pattern_desc =
   (* value patterns *)
   | Tpat_any : value pattern_desc
       (** [_] *)
-  | Tpat_var : { id: Ident.t; name: string Asttypes.loc } -> value pattern_desc
+  | Tpat_var : {
+        id: Ident.t;
+        name: string Asttypes.loc;
+        uid: (not_available, Shape.Uid.t) ocaml_520;
+      }
+      -> value pattern_desc
       (** [x]
           [(module M)] only allowed in [let ... in] (See {!pat_extra.Tpat_unpack})
       *)
-  | Tpat_alias :
-      { pat: value general_pattern; id: Ident.t; name: string Asttypes.loc }
+  | Tpat_alias : {
+        pat: value general_pattern;
+        id: Ident.t;
+        name: string Asttypes.loc;
+        uid: (not_available, Shape.Uid.t) ocaml_520;
+      }
       -> value pattern_desc
       (** [P as a] *)
   | Tpat_constant : { const: Asttypes.constant } -> value pattern_desc
@@ -222,19 +235,85 @@ and expression_desc =
 
           [let rec ... and ...] => [{ rec_ = Recursive }]
       *)
-  | Texp_function of {
-        arg_label: Asttypes.arg_label;
-        param: Ident.t;
-        cases: value case list;
-        partial: partial;
+  | Texp_function of
+      { params: (Asttypes.arg_label, function_param list) ocaml_520;
+        body: function_body;
       }
-      (** [fun P -> E]    => [{ arg_label = Nolabel; cases = [P -> E] }]
+      (** Prior to 5.2, [fun] and [function] constructs were represented
+          as [function], making all [Texp_function] unary and all their
+          bodies case lists.
+          E.g.
+            [fun x y z -> ...] would be the same as
+            [function x -> function y -> function z -> ...].
 
-          [fun ~l:P -> E] => [{ arg_label = Labelled "l" }]
-          [fun ?l:P -> E] => [{ arg_label = Optional "l" }]
+          Since 5.2, a [fun] is represented with a [Texp_function] of the
+          same arity and its body is a [Tfunction_body] (unless it is
+          a [function]), while a [function] is represented with a
+          [Texp_function] without parameter and its body is  case list
+          E.g.
+            [fun x y -> fun z -> function _ -> ...] creates a
+            [Texp_function] of arity 2, and its body is a [Texp_function]
+            of arity 1, and its body is a case list of length 1.
 
-          [function P1 -> E1 | ... | Pn -> En ]
-          => [{ cases = [P1 -> E1; ...; Pn -> En] }]
+          In order to reduce friction when supporting multiple versions,
+          the old representation is adapted to the new one with the
+          following constraints to conserve the old semantics:
+            - There is always a single arg_label as parameter
+            - The body is always a [Tfunction_cases]
+
+          OCaml >= 5.2 :
+            [function P1 -> E1 | ... | Pn -> En ]
+            =>
+              {[
+                { params = Since_520 [];
+                  body = Tfunction_cases { cases = [P1 -> E1; ...; Pn -> En] };
+                }
+              ]}
+
+            [fun P -> ...]
+            =>
+              {[
+                params =
+                  Since_520 [
+                      { fp_arg_label = Nolabel; fp_kind = Tparam_pat P }
+                    ]
+              ]}
+
+            [fun ~l:P -> ...] => [fp_arg_label = Labelled "l"]
+
+            [fun ?l:P -> ...] => [fp_arg_label = Optional "l"]
+
+            [fun ?l:(P = E) -> ...]
+            => [fp_kind = Tparam_optional_default { pat = P; default = E }]
+
+            [fun P1 ... Pn -> ...]
+            => [{ params = Since_520 [P1; P2; ...; Pn] }]
+
+            [fun ... -> function P1 -> E1 | ... | Pn -> En ]
+            => [body = Tfunction_cases { cases = [P1 -> E1; ...; Pn -> En] }]
+
+            [fun ... -> E ] => [body = Tfunction_body { expr = E }]
+
+
+          OCaml < 5.2 :
+            [function P1 -> E1 | ... | Pn -> En ]
+            =>
+              {[
+                { params = Until_520 Nolabel;
+                  body = Tfunction_cases { cases = [P1 -> E1; ...; Pn -> En] };
+                }
+              ]}
+
+            [fun P -> E]
+            =>
+              {[
+                { params = Until_520 Nolabel;
+                  body = Tfunction_cases { cases = [P -> E] };
+                }
+              ]}
+
+            [fun ~l:P -> E] => [{ params = Until_520 (Labelled "l") }]
+            [fun ?l:P -> E] => [{ params = Until_520 (Optional "l") }]
       *)
   | Texp_apply of
       { f: expression; args: (Asttypes.arg_label * expression option) list }
@@ -443,6 +522,57 @@ and 'k case = {
   c_guard: expression option;
   c_rhs: expression;
 }
+
+and function_param = {
+  fp_arg_label: Asttypes.arg_label;
+  fp_param: Ident.t;
+    (** [fp_param] is the identifier that is to be used to name the
+        parameter of the function.
+    *)
+  fp_partial: partial;
+    (**
+       [fp_partial] =
+       [Partial] if the pattern match is partial
+       [Total] otherwise.
+    *)
+  fp_kind: function_param_kind;
+  fp_newtypes: string Asttypes.loc list;
+    (** [fp_newtypes] are the new type declarations that come *after* that
+        parameter. The newtypes that come before the first parameter are
+        placed as exp_extras on the Texp_function node. This is just used in
+        {!Untypeast}. *)
+  fp_loc: Location.t;
+    (** [fp_loc] is the location of the entire value parameter, not including
+        the [fp_newtypes].
+    *)
+}
+
+and function_param_kind =
+  | Tparam_pat of { pat: pattern }
+      (** [Tparam_pat { pat }] is a non-optional argument, or optional
+          argument without default value, with pattern [pat].
+      *)
+  | Tparam_optional_default of { pat: pattern; default: expression }
+      (** [Tparam_optional_default {pat; default}] is an optional argument
+          [pat] with default value [default], i.e. [?x:(pat = default)].
+          If the parameter is of type ['a option], the pattern and expression
+          are of type ['a].
+      *)
+
+and function_body =
+  | Tfunction_body of { expr: expression } (** Since OCaml 5.2 *)
+  | Tfunction_cases of {
+        cases: value case list;
+        partial: partial;
+        param: Ident.t;
+        loc: (not_available, Location.t) ocaml_520;
+        exp_extra: (not_available, exp_extra option) ocaml_520;
+        attributes: (not_available, attributes) ocaml_520;
+        (** [attributes] is just used in untypeast. *)
+      }
+      (** The function body binds a final argument in [Tfunction_cases],
+          and this argument is pattern-matched against the cases.
+      *)
 
 and record_label_definition =
   | Kept of {
@@ -719,6 +849,7 @@ and structure_item_desc =
 and module_binding = {
   mb_id: Ident.t option;
   mb_name: string option Asttypes.loc;
+  mb_uid: (not_available, Shape.Uid.t) ocaml_520;
   mb_presence: Types.module_presence;
   mb_expr: module_expr;
   mb_attributes: attributes;
@@ -728,6 +859,8 @@ and module_binding = {
 and value_binding = {
   vb_pat: pattern;
   vb_expr: expression;
+  vb_rec_kind:
+    (not_available, OCaml.Value_rec_types.recursive_binding_kind) ocaml_520;
   vb_attributes: attributes;
   vb_loc: Location.t;
 }
@@ -847,6 +980,7 @@ and signature_item_desc =
 and module_declaration = {
   md_id: Ident.t option;
   md_name: string option Asttypes.loc;
+  md_uid: (not_available, Shape.Uid.t) ocaml_520;
   md_presence: Types.module_presence;
   md_type: module_type;
   md_attributes: attributes;
@@ -856,6 +990,7 @@ and module_declaration = {
 and module_substitution = {
   ms_id: Ident.t;
   ms_name: string Asttypes.loc;
+  ms_uid: (not_available, Shape.Uid.t) ocaml_520;
   ms_manifest: Path.t;
   ms_txt: Longident.t Asttypes.loc;
   ms_attributes: attributes;
@@ -865,6 +1000,7 @@ and module_substitution = {
 and module_type_declaration = {
   mtd_id: Ident.t;
   mtd_name: string Asttypes.loc;
+  mtd_uid: (not_available, Shape.Uid.t) ocaml_520;
   mtd_type: module_type option;
   mtd_attributes: attributes;
   mtd_loc: Location.t;
@@ -942,7 +1078,8 @@ and core_type_desc =
   | Ttyp_class of
       { path: Path.t; longid: Longident.t Asttypes.loc; params: core_type list }
       (** [(t1, ..., tn) #t] *)
-  | Ttyp_alias of { type_: core_type; name: string }
+  | Ttyp_alias of
+      { type_: core_type; name: (string, string Asttypes.loc) ocaml_520 }
       (** [t as name] *)
   | Ttyp_variant of {
         rows: row_field list;
@@ -970,6 +1107,9 @@ and core_type_desc =
       (** ['a1 ... 'an . t] *)
   | Ttyp_package of { pack_type: package_type }
       (** [(module S)] *)
+  | Ttyp_open of
+      { path: Path.t; longid: Longident.t Asttypes.loc; type_: core_type }
+      (** [M.(t) *)
 
 and package_type = {
   pack_path: Path.t;
@@ -1042,6 +1182,7 @@ and type_kind =
 and label_declaration = {
   ld_id: Ident.t;
   ld_name: string Asttypes.loc;
+  ld_uid: (not_available, Shape.Uid.t) ocaml_520;
   ld_mutable: Asttypes.mutable_flag;
   ld_type: core_type;
   ld_loc: Location.t;
@@ -1051,6 +1192,7 @@ and label_declaration = {
 and constructor_declaration = {
   cd_id: Ident.t;
   cd_name: string Asttypes.loc;
+  cd_uid: (not_available, Shape.Uid.t) ocaml_520;
   cd_vars: string Asttypes.loc list;
   cd_args: constructor_arguments;
   cd_res: core_type option;
