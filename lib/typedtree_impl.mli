@@ -52,6 +52,15 @@ val to_meth : meth -> OCaml.meth
 val of_case : 'k OCaml.case -> 'k case
 val to_case : 'k case -> 'k OCaml.case
 
+val of_function_param : OCaml.function_param -> function_param
+val to_function_param : function_param -> OCaml.function_param
+
+val of_function_param_kind : OCaml.function_param_kind -> function_param_kind
+val to_function_param_kind : function_param_kind -> OCaml.function_param_kind
+
+val of_function_body : OCaml.function_body -> function_body
+val to_function_body : function_body -> OCaml.function_body
+
 val of_record_label_definition : OCaml.record_label_definition -> record_label_definition
 val to_record_label_definition : record_label_definition -> OCaml.record_label_definition
 
