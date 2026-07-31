@@ -2,6 +2,11 @@ include module type of Typedtree_intf (** @inline *)
 
 module OCaml = OCaml.Typedtree (** compiler-lib's Typedtree *)
 
+(** Conversion functions.
+    [of] and [to] conversions are symmetrical.
+    Usually, one can be trivially derived from the other.
+*)
+
 val of_partial : OCaml.partial -> partial
 val to_partial : partial -> OCaml.partial
 
