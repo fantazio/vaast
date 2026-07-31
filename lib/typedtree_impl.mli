@@ -2,6 +2,8 @@ include module type of Typedtree_intf (** @inline *)
 
 module OCaml = OCaml.Typedtree (** compiler-lib's Typedtree *)
 
+module Utils = Typedtree_utils
+
 (** Conversion functions.
     [of] and [to] conversions are symmetrical.
     Usually, one can be trivially derived from the other.

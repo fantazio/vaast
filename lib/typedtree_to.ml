@@ -2,6 +2,7 @@ open Typedtree_intf
 
 module OCaml = OCaml.Typedtree
 
+
 (* [to_*] conversion functions *)
 
 let to_partial : partial -> OCaml.partial = function
@@ -51,28 +52,22 @@ and to_pattern_desc : type k . k pattern_desc -> k OCaml.pattern_desc = function
   (* value patterns *)
   | Tpat_any -> Tpat_any
   | Tpat_var { id; name; uid } ->
+      let open Typedtree_utils in
       #if OCAML_VERSION < (5, 2, 0)
-      assert (uid = Until_520 NA);
+      uid |> is_not_available until_520;
       Tpat_var (id, name)
       #elif OCAML_VERSION >= (5, 2, 0)
-      let uid =
-        match uid with
-        | Until_520 NA -> assert false
-        | Since_520 uid -> uid
-      in
+      let uid = get_since_520 uid in
       Tpat_var (id, name, uid)
       #endif
   | Tpat_alias { pat; id; name; uid } ->
+      let open Typedtree_utils in
       let pat = to_general_pattern pat in
       #if OCAML_VERSION < (5, 2, 0)
-      assert (uid = Until_520 NA);
+      uid |> is_not_available until_520;
       Tpat_alias (pat, id, name)
       #elif OCAML_VERSION >= (5, 2, 0)
-      let uid =
-        match uid with
-        | Until_520 NA -> assert false
-        | Since_520 uid -> uid
-      in
+      let uid = get_since_520 uid in
       Tpat_alias (pat, id, name, uid)
       #endif
   | Tpat_constant { const } -> Tpat_constant const
@@ -287,16 +282,13 @@ and to_expression_desc : expression_desc -> OCaml.expression_desc = function
       let in_ = to_expression in_ in
       Texp_letexception (extension_ctor, in_)
   | Texp_assert { expr; loc } ->
+      let open Typedtree_utils in
       let expr = to_expression expr in
       #if OCAML_VERSION < (5, 1, 0)
-      assert (loc = Until_510 NA);
+      loc |> is_not_available until_510;
       Texp_assert expr
       #elif OCAML_VERSION >= (5, 1, 0)
-      let loc =
-        match loc with
-        | Until_510 _ -> assert false
-        | Since_510 loc -> loc
-      in
+      let loc = get_since_510 loc in
       Texp_assert (expr, loc)
       #endif
   | Texp_lazy { expr } ->
@@ -360,47 +352,35 @@ and to_function_body : function_body -> OCaml.function_body = fun body ->
      function_body is introduced.
   *)
   ignore body; (* remove warning 27 *)
-  assert false
+  assert false (* for type checking. The line above already triggers it *)
   #elif OCAML_VERSION >= (5, 2, 0)
   match body with
   | Tfunction_body { expr } ->
       let expr = to_expression expr in
       Tfunction_body expr
   | Tfunction_cases { cases; partial; param; loc; exp_extra; attributes } ->
+      let open Typedtree_utils in
       let cases = List.map to_case cases in
       let partial = to_partial partial in
-      let loc =
-        match loc with
-        | Until_520 NA -> assert false
-        | Since_520 loc -> loc
-      in
-      let exp_extra =
-        match exp_extra with
-        | Until_520 NA -> assert false
-        | Since_520 exp_extra -> Option.map to_exp_extra exp_extra
-      in
-      let attributes =
-        match attributes with
-        | Until_520 NA -> assert false
-        | Since_520 attributes -> to_attributes attributes
-      in
+      let loc = get_since_520 loc in
+      let exp_extra = get_since_520 exp_extra in
+      let exp_extra = Option.map to_exp_extra exp_extra in
+      let attributes = get_since_520 attributes in
+      let attributes = to_attributes attributes in
       Tfunction_cases { cases; partial; param; loc; exp_extra; attributes }
       #endif
 
 and to_record_label_definition :
   record_label_definition -> OCaml.record_label_definition =
   function
-    | Kept { type_expr; mut } ->
+  | Kept { type_expr; mut } ->
+      let open Typedtree_utils in
       #if OCAML_VERSION < (5, 0, 0)
-        assert (mut = Until_500 NA);
-        Kept type_expr
+      mut |> is_not_available until_500;
+      Kept type_expr
       #elif OCAML_VERSION >= (5, 0, 0)
-        let mut =
-          match mut with
-          | Until_500 _ -> assert false
-          | Since_500 mut -> mut
-        in
-        Kept (type_expr, mut)
+      let mut = get_since_500 mut in
+      Kept (type_expr, mut)
       #endif
   | Overridden { longid; expr } ->
       let expr = to_expression expr in
@@ -425,8 +405,8 @@ and to_class_expr : class_expr -> OCaml.class_expr = fun cl ->
 
 and to_class_expr_desc : class_expr_desc -> OCaml.class_expr_desc = function
   | Tcl_ident { path; longid; params } ->
-        let params = List.map to_core_type params in
-        Tcl_ident (path, longid, params)
+      let params = List.map to_core_type params in
+      Tcl_ident (path, longid, params)
   | Tcl_structure { strc } ->
       let strc = to_class_structure strc in
       Tcl_structure strc
@@ -515,12 +495,12 @@ and to_class_field_desc : class_field_desc -> OCaml.class_field_desc = function
       Tcf_attribute attribute
 
 and to_module_expr : module_expr -> OCaml.module_expr = fun me ->
-    let mod_desc = to_module_expr_desc me.mod_desc in
-    let mod_loc = me.mod_loc in
-    let mod_type = me.mod_type in
-    let mod_env = me.mod_env in
-    let mod_attributes = to_attributes me.mod_attributes in
-    { mod_desc; mod_loc; mod_type; mod_env; mod_attributes }
+  let mod_desc = to_module_expr_desc me.mod_desc in
+  let mod_loc = me.mod_loc in
+  let mod_type = me.mod_type in
+  let mod_env = me.mod_env in
+  let mod_attributes = to_attributes me.mod_attributes in
+  { mod_desc; mod_loc; mod_type; mod_env; mod_attributes }
 
 and to_module_type_constraint:
   module_type_constraint -> OCaml.module_type_constraint =
@@ -552,6 +532,7 @@ and to_module_expr_desc : module_expr_desc -> OCaml.module_expr_desc = function
       Tmod_apply (ftor, arg, res_coercion)
   | Tmod_apply_unit { ftor } ->
       #if OCAML_VERSION < (5, 1, 0)
+      (* Tmod_apply_unit was introduced in OCaml 5.1 *)
       ignore ftor; (* remove warning 27 *)
       assert false
       #elif OCAML_VERSION >= (5, 1, 0)
@@ -640,14 +621,11 @@ and to_structure_item_desc : structure_item_desc -> OCaml.structure_item_desc =
 and to_module_binding : module_binding -> OCaml.module_binding = fun mb ->
   let mb_id = mb.mb_id in
   let mb_name = mb.mb_name in
+  let open Typedtree_utils in
   #if OCAML_VERSION < (5, 2, 0)
-  assert (mb.mb_uid = Until_520 NA);
+  mb.mb_uid |> is_not_available until_520;
   #elif OCAML_VERSION >= (5, 2, 0)
-  let mb_uid =
-    match mb.mb_uid with
-    | Until_520 NA -> assert false
-    | Since_520 mb_uid -> mb_uid
-  in
+  let mb_uid = get_since_520 mb.mb_uid in
   #endif
   let mb_presence = mb.mb_presence in
   let mb_expr = to_module_expr mb.mb_expr in
@@ -668,14 +646,11 @@ and to_module_binding : module_binding -> OCaml.module_binding = fun mb ->
 and to_value_binding : value_binding -> OCaml.value_binding = fun vb ->
   let vb_pat = to_pattern vb.vb_pat in
   let vb_expr = to_expression vb.vb_expr in
+  let open Typedtree_utils in
   #if OCAML_VERSION < (5, 2, 0)
-  assert (vb.vb_rec_kind = Until_520 NA);
+  vb.vb_rec_kind |> is_not_available until_520;
   #elif OCAML_VERSION >= (5, 2, 0)
-  let vb_rec_kind =
-    match vb.vb_rec_kind with
-    | Until_520 NA -> assert false
-    | Since_520 vb_rec_kind -> vb_rec_kind
-  in
+  let vb_rec_kind = get_since_520 vb.vb_rec_kind in
   #endif
   let vb_attributes = to_attributes vb.vb_attributes in
   let vb_loc = vb.vb_loc in
@@ -824,14 +799,11 @@ and to_module_declaration : module_declaration -> OCaml.module_declaration =
   fun md ->
   let md_id = md.md_id in
   let md_name = md.md_name in
+  let open Typedtree_utils in
   #if OCAML_VERSION < (5, 2, 0)
-  assert (md.md_uid = Until_520 NA);
+  md.md_uid |> is_not_available until_520;
   #elif OCAML_VERSION >= (5, 2, 0)
-  let md_uid =
-    match md.md_uid with
-    | Until_520 NA -> assert false
-    | Since_520 md_uid -> md_uid
-  in
+  let md_uid = get_since_520 md.md_uid in
   #endif
   let md_presence = md.md_presence in
   let md_type = to_module_type md.md_type in
@@ -853,14 +825,11 @@ and to_module_substitution : module_substitution -> OCaml.module_substitution =
   fun ms ->
   let ms_id = ms.ms_id in
   let ms_name = ms.ms_name in
+  let open Typedtree_utils in
   #if OCAML_VERSION < (5, 2, 0)
-  assert (ms.ms_uid = Until_520 NA);
+  ms.ms_uid |> is_not_available until_520;
   #elif OCAML_VERSION >= (5, 2, 0)
-  let ms_uid =
-    match ms.ms_uid with
-    | Until_520 NA -> assert false
-    | Since_520 ms_uid -> ms_uid
-  in
+  let ms_uid = get_since_520 ms.ms_uid in
   #endif
   let ms_manifest = ms.ms_manifest in
   let ms_txt = ms.ms_txt in
@@ -883,14 +852,11 @@ and to_module_type_declaration:
   fun mtd ->
   let mtd_id = mtd.mtd_id in
   let mtd_name = mtd.mtd_name in
+  let open Typedtree_utils in
   #if OCAML_VERSION < (5, 2, 0)
-  assert (mtd.mtd_uid = Until_520 NA);
+  mtd.mtd_uid |> is_not_available until_520;
   #elif OCAML_VERSION >= (5, 2, 0)
-  let mtd_uid =
-    match mtd.mtd_uid with
-    | Until_520 NA -> assert false
-    | Since_520 mtd_uid -> mtd_uid
-  in
+  let mtd_uid = get_since_520 mtd.mtd_uid in
   #endif
   let mtd_type = Option.map to_module_type mtd.mtd_type in
   let mtd_attributes = to_attributes mtd.mtd_attributes in
@@ -959,12 +925,12 @@ and to_with_constraint : with_constraint -> OCaml.with_constraint = function
       Twith_modtypesubst mod_type
 
 and to_core_type : core_type -> OCaml.core_type = fun ct ->
-    let ctyp_desc = to_core_type_desc ct.ctyp_desc in
-    let ctyp_type = ct.ctyp_type in
-    let ctyp_env = ct.ctyp_env in
-    let ctyp_loc = ct.ctyp_loc in
-    let ctyp_attributes = to_attributes ct.ctyp_attributes in
-    { ctyp_desc; ctyp_type; ctyp_env; ctyp_loc; ctyp_attributes }
+  let ctyp_desc = to_core_type_desc ct.ctyp_desc in
+  let ctyp_type = ct.ctyp_type in
+  let ctyp_env = ct.ctyp_env in
+  let ctyp_loc = ct.ctyp_loc in
+  let ctyp_attributes = to_attributes ct.ctyp_attributes in
+  { ctyp_desc; ctyp_type; ctyp_env; ctyp_loc; ctyp_attributes }
 
 and to_core_type_desc : core_type_desc -> OCaml.core_type_desc = function
   | Ttyp_any -> Ttyp_any
@@ -1013,6 +979,7 @@ and to_core_type_desc : core_type_desc -> OCaml.core_type_desc = function
       Ttyp_package (pack_type)
   | Ttyp_open { path; longid; type_ } ->
       #if OCAML_VERSION < (5, 2, 0)
+      (* Ttyp_open was introduced in OCaml 5.2 *)
       ignore path; (* remove warning 27 *)
       ignore longid; (* remove warning 27 *)
       ignore type_; (* remove warning 27 *)
@@ -1125,14 +1092,11 @@ and to_label_declaration : label_declaration -> OCaml.label_declaration =
   fun ld ->
   let ld_id = ld.ld_id in
   let ld_name = ld.ld_name in
+  let open Typedtree_utils in
   #if OCAML_VERSION < (5, 2, 0)
-  assert (ld.ld_uid = Until_520 NA);
+  ld.ld_uid |> is_not_available until_520;
   #elif OCAML_VERSION >= (5, 2, 0)
-  let ld_uid =
-    match ld.ld_uid with
-    | Until_520 NA -> assert false
-    | Since_520 ld_uid -> ld_uid
-  in
+  let ld_uid = get_since_520 ld.ld_uid in
   #endif
   let ld_mutable = ld.ld_mutable in
   let ld_type = to_core_type ld.ld_type in
@@ -1155,14 +1119,11 @@ and to_constructor_declaration :
   fun cd ->
   let cd_id = cd.cd_id in
   let cd_name = cd.cd_name in
+  let open Typedtree_utils in
   #if OCAML_VERSION < (5, 2, 0)
-  assert (cd.cd_uid = Until_520 NA);
+  cd.cd_uid |> is_not_available until_520;
   #elif OCAML_VERSION >= (5, 2, 0)
-  let cd_uid =
-    match cd.cd_uid with
-    | Until_520 NA -> assert false
-    | Since_520 md_uid -> md_uid
-  in
+  let cd_uid = get_since_520 cd.cd_uid in
   #endif
   let cd_vars = cd.cd_vars in
   let cd_args = to_constructor_arguments cd.cd_args in
@@ -1326,14 +1287,11 @@ and to_class_infos :
   let ci_id_class = ci.ci_id_class in
   let ci_id_class_type = ci.ci_id_class_type in
   let ci_id_object = ci.ci_id_object in
+  let open Typedtree_utils in
   #if OCAML_VERSION < (5, 1, 0)
-  let ci_id_typehash =
-    match ci.ci_id_typehash with
-    | Until_510 ci_id_typehash -> ci_id_typehash
-    | Since_510 NA -> assert false
-  in
+  let ci_id_typehash = get_until_510 ci.ci_id_typehash in
   #elif OCAML_VERSION >= (5, 1, 0)
-  assert (ci.ci_id_typehash = Since_510 NA);
+  ci.ci_id_typehash |> is_not_available since_510;
   #endif
   let ci_expr = to_ci_expr ci.ci_expr in
   let ci_decl = ci.ci_decl in
