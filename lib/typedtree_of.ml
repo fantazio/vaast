@@ -188,15 +188,36 @@ and of_expression_desc : OCaml.expression_desc -> expression_desc = function
         List.map convert args
       in
       Texp_apply { f; args }
+  #if OCAML_VERSION < (5, 3, 0)
   | Texp_match (expr, cases, partial) ->
       let expr = of_expression expr in
       let cases = List.map of_case cases in
+      let effect_cases = not_available until_530 in
       let partial = of_partial partial in
-      Texp_match { expr; cases; partial }
+      Texp_match { expr; cases; effect_cases; partial }
+  #elif OCAML_VERSION >= (5, 3, 0)
+  | Texp_match (expr, cases, effect_cases, partial) ->
+      let expr = of_expression expr in
+      let cases = List.map of_case cases in
+      let effect_cases = List.map of_case effect_cases in
+      let effect_cases = since_530 effect_cases in
+      let partial = of_partial partial in
+      Texp_match { expr; cases; effect_cases; partial }
+  #endif
+  #if OCAML_VERSION < (5, 3, 0)
   | Texp_try (expr, cases) ->
       let expr = of_expression expr in
       let cases = List.map of_case cases in
-      Texp_try { expr; cases }
+      let effect_cases = not_available until_530 in
+      Texp_try { expr; cases; effect_cases }
+  #elif OCAML_VERSION >= (5, 3, 0)
+  | Texp_try (expr, cases, effect_cases) ->
+      let expr = of_expression expr in
+      let cases = List.map of_case cases in
+      let effect_cases = List.map of_case effect_cases in
+      let effect_cases = since_530 effect_cases in
+      Texp_try { expr; cases; effect_cases }
+  #endif
   | Texp_tuple fields ->
       let fields = List.map of_expression fields in
       Texp_tuple { fields }
@@ -312,9 +333,14 @@ and of_meth : OCaml.meth -> meth = function
 
 and of_case : 'k . 'k OCaml.case -> 'k case = fun case ->
   let c_lhs = of_general_pattern case.c_lhs in
+  #if OCAML_VERSION < (5, 3, 0)
+  let c_cont = not_available until_530 in
+  #elif OCAML_VERSION >= (5, 3, 0)
+  let c_cont = since_530 case.c_cont in
+  #endif
   let c_guard = Option.map of_expression case.c_guard in
   let c_rhs = of_expression case.c_rhs in
-  { c_lhs; c_guard; c_rhs }
+  { c_lhs; c_cont; c_guard; c_rhs }
 
 and of_function_param : OCaml.function_param -> function_param = fun fp ->
   let fp_arg_label = fp.fp_arg_label in

@@ -198,15 +198,31 @@ and to_expression_desc : expression_desc -> OCaml.expression_desc = function
         List.map convert args
       in
       Texp_apply (f, args)
-  | Texp_match { expr; cases; partial } ->
+  | Texp_match { expr; cases; effect_cases; partial } ->
+      let open Typedtree_utils in
       let expr = to_expression expr in
       let cases = List.map to_case cases in
       let partial = to_partial partial in
+      #if OCAML_VERSION < (5, 3, 0)
+      effect_cases |> is_not_available until_530;
       Texp_match (expr, cases, partial)
-  | Texp_try { expr; cases } ->
+      #elif OCAML_VERSION >= (5, 3, 0)
+      let effect_cases = get_since_530 effect_cases in
+      let effect_cases = List.map to_case effect_cases in
+      Texp_match (expr, cases, effect_cases, partial)
+      #endif
+  | Texp_try { expr; cases; effect_cases } ->
+      let open Typedtree_utils in
       let expr = to_expression expr in
       let cases = List.map to_case cases in
+      #if OCAML_VERSION < (5, 3, 0)
+      effect_cases |> is_not_available until_530;
       Texp_try (expr, cases)
+      #elif OCAML_VERSION >= (5, 3, 0)
+      let effect_cases = get_since_530 effect_cases in
+      let effect_cases = List.map to_case effect_cases in
+      Texp_try (expr, cases, effect_cases)
+      #endif
   | Texp_tuple { fields } ->
       let fields = List.map to_expression fields in
       Texp_tuple fields
@@ -321,9 +337,22 @@ and to_meth : meth -> OCaml.meth = function
 
 and to_case : 'k . 'k case -> 'k OCaml.case = fun case ->
   let c_lhs = to_general_pattern case.c_lhs in
+  let open Typedtree_utils in
+  #if OCAML_VERSION < (5, 3, 0)
+  case.c_cont |> is_not_available until_530;
+  #elif OCAML_VERSION >= (5, 3, 0)
+  let c_cont = get_since_530 case.c_cont in
+  #endif
   let c_guard = Option.map to_expression case.c_guard in
   let c_rhs = to_expression case.c_rhs in
-  { c_lhs; c_guard; c_rhs }
+  { c_lhs;
+    #if OCAML_VERSION < (5, 3, 0)
+    #elif OCAML_VERSION >= (5, 3, 0)
+    c_cont;
+    #endif
+    c_guard;
+    c_rhs;
+  }
 
 and to_function_param : function_param -> OCaml.function_param = fun fp ->
   let fp_arg_label = fp.fp_arg_label in

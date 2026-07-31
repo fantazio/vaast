@@ -34,6 +34,10 @@ type ('until, 'since) ocaml_520 =
   | Until_520 of 'until (** type until 5.2.0 excluded *)
   | Since_520 of 'since (** type since 5.2.0 included *)
 
+type ('until, 'since) ocaml_530 =
+  | Until_530 of 'until (** type until 5.3.0 excluded *)
+  | Since_530 of 'since (** type since 5.3.0 included *)
+
 (* Value expressions for the core language *)
 
 (** [partial] indicates if all pattern cases are accounted for or not
@@ -341,13 +345,18 @@ and expression_desc =
           ]}
           => [{ args = [(Nolabel, None); (Labelled "y", Some _)] }]
       *)
-  | Texp_match of
-      { expr: expression; cases: computation case list; partial: partial }
+  | Texp_match of {
+        expr: expression;
+        cases: computation case list;
+        effect_cases: (not_available, value case list) ocaml_530;
+        partial: partial;
+      }
       (** {[
             match E0 with
             | P1 -> E1
             | P2 | exception P3 -> E2
             | exception P4 -> E3
+            | effect P5 k -> E4
           ]}
           =>
             {[
@@ -357,11 +366,32 @@ and expression_desc =
                     P2 | exception P3 -> E2;
                     exception P4 -> E3
                   ];
+                effect_cases = [ effect P5 k -> E4 ];
               }
             ]}
       *)
-  | Texp_try of { expr: expression; cases: value case list }
-      (** [try E with P1 -> E1 | ... | PN -> EN] *)
+  | Texp_try of {
+        expr: expression;
+        cases: value case list;
+        effect_cases: (not_available, value case list) ocaml_530;
+      }
+      (** {[
+            try E0 with
+            | P1 -> E1
+            | P2 | P3 -> E2
+            | effect P4 k -> E3
+          ]}
+          =>
+            {[
+              { expr = E0;
+                cases =
+                  [ P1 -> E1;
+                    P2 | P3 -> E2;
+                  ];
+                effect_cases = [ effect P4 k -> E3 ];
+              }
+            ]}
+      *)
   | Texp_tuple of { fields: expression list }
       (** [E1, ..., EN] *)
   | Texp_construct of {
@@ -519,6 +549,7 @@ and meth =
 
 and 'k case = {
   c_lhs: 'k general_pattern;
+  c_cont: (not_available, Ident.t option) ocaml_530;
   c_guard: expression option;
   c_rhs: expression;
 }
