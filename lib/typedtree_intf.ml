@@ -369,6 +369,14 @@ and expression_desc =
                 effect_cases = [ effect P5 k -> E4 ];
               }
             ]}
+
+          NB: the [effect_cases] has an [ocaml_530] type. Because it is
+              [not_available] in one case and a [list] in the other, the
+              field could be reduced to a list in all cases, always empty
+              in the first. This reduction would avoid an extra wrapping.
+              This is kept as an [ocaml_530] for now for the sake of
+              documenting changes in the type.
+              The same comment applies to [Texp_try] below.
       *)
   | Texp_try of {
         expr: expression;
@@ -550,6 +558,15 @@ and meth =
 and 'k case = {
   c_lhs: 'k general_pattern;
   c_cont: (not_available, Ident.t option) ocaml_530;
+    (** NB: this field has an [ocaml_530] type. Because it is
+            [not_available] in one case and a [option] in the other, the
+            field could be reduced to an option in all cases, always [None]
+            in the first. This reduction would avoid an extra wrapping.
+            This is kept as an [ocaml_530] for now for the sake of
+            documenting changes in the type.
+            This is the same reasoning as for
+            {!expression_desc.Texp_match.effect_cases}.
+    *)
   c_guard: expression option;
   c_rhs: expression;
 }
@@ -598,6 +615,13 @@ and function_body =
         param: Ident.t;
         loc: (not_available, Location.t) ocaml_520;
         exp_extra: (not_available, exp_extra option) ocaml_520;
+          (** NB: this field has an [ocaml_520] type although it is
+                  [not_available] in one case and an [option] in the other.
+                  The same reasoning as for {!case.c_cont} can be applied.
+                  The same reasoning could also be applied to [attributes]
+                  below, which is a [list] in the second case (similar to
+                  {!expression_desc.Texp_match.effect_cases}).
+          *)
         attributes: (not_available, attributes) ocaml_520;
         (** [attributes] is just used in untypeast. *)
       }
