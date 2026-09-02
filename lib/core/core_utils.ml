@@ -1,4 +1,6 @@
-open Typedtree_intf
+(** Utility functions to manipulate ocaml_XXX values *)
+
+open Core_intf
 
 let until_500 x = Until_500 x
 let since_500 x = Since_500 x
