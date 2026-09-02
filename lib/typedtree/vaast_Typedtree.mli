@@ -1,6 +1,8 @@
-include module type of Typedtree_intf (** @inline *)
-
 module OCaml = Vaast_OCaml.Typedtree (** compiler-lib's Typedtree *)
+
+include module type of Typedtree_intf
+  with module Typedtree := OCaml
+  (** @inline *)
 
 (** Conversion functions.
     [of] and [to] conversions are symmetrical.
