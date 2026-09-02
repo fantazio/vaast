@@ -915,7 +915,7 @@ and value_binding = {
   vb_pat: pattern;
   vb_expr: expression;
   vb_rec_kind:
-    (not_available, OCaml.Value_rec_types.recursive_binding_kind) ocaml_520;
+    (not_available, Vaast_OCaml.Value_rec_types.recursive_binding_kind) ocaml_520;
   vb_attributes: attributes;
   vb_loc: Location.t;
 }
