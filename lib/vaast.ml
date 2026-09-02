@@ -1,5 +1,5 @@
 (** *)
 
-module OCaml = OCaml (** compiler-libs' definitions *)
+module OCaml = Vaast_OCaml (** compiler-libs' definitions *)
 
-module Typedtree = Typedtree_impl (** Vaast's Typedtree *)
+module Typedtree = Vaast_Typedtree (** Vaast's Typedtree *)

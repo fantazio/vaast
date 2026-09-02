@@ -1,6 +1,6 @@
 (library
- (public_name vaast)
- (name vaast)
- (libraries vaast.ocaml vaast.typedtree)
+ (public_name vaast.ocaml)
+ (name vaast_OCaml)
+ (libraries compiler-libs.common)
  (preprocess (action (run %{bin:cppo} -V OCAML:%{ocaml_version} %{input-file})))
 )
