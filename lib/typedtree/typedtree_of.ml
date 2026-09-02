@@ -105,6 +105,7 @@ and of_expression_desc : OCaml.expression_desc -> expression_desc = function
   #if OCAML_VERSION < (5, 2, 0)
   | Texp_function { arg_label; param; cases; partial } ->
       let params = until_520 arg_label in
+      let partial = of_partial partial in
       let loc = not_available until_520 in
       let exp_extra = not_available until_520 in
       let attributes = not_available until_520 in
@@ -122,10 +123,12 @@ and of_expression_desc : OCaml.expression_desc -> expression_desc = function
   #if OCAML_VERSION < (5, 3, 0)
   | Texp_match (expr, cases, partial) ->
       let effect_cases = not_available until_530 in
+      let partial = of_partial partial in
       Texp_match { expr; cases; effect_cases; partial }
   #elif OCAML_VERSION >= (5, 3, 0)
   | Texp_match (expr, cases, effect_cases, partial) ->
       let effect_cases = since_530 effect_cases in
+      let partial = of_partial partial in
       Texp_match { expr; cases; effect_cases; partial }
   #endif
   #if OCAML_VERSION < (5, 3, 0)
@@ -154,6 +157,7 @@ and of_expression_desc : OCaml.expression_desc -> expression_desc = function
   | Texp_for (counter_id, counter_pat, start, finish, direction, body) ->
       Texp_for { counter_id; counter_pat; start; finish; direction; body }
   | Texp_send (obj, meth) ->
+      let meth = of_meth meth in
       Texp_send { obj; meth }
   | Texp_new (path, longid, class_decl) -> Texp_new { path; longid; class_decl }
   | Texp_instvar (class_path, var_path, name) ->
@@ -182,6 +186,7 @@ and of_expression_desc : OCaml.expression_desc -> expression_desc = function
   | Texp_pack mod_expr ->
       Texp_pack { mod_expr }
   | Texp_letop { let_; ands; param; body; partial } ->
+      let partial = of_partial partial in
       Texp_letop { let_; ands; param; body; partial }
   | Texp_unreachable -> Texp_unreachable
   | Texp_extension_constructor (longid, path) ->
@@ -208,8 +213,8 @@ and of_case : 'k . 'k OCaml.case -> 'k case = fun case ->
 and of_function_param : OCaml.function_param -> function_param = fun fp ->
   let fp_arg_label = fp.fp_arg_label in
   let fp_param = fp.fp_param in
-  let fp_partial = fp.fp_partial in
-  let fp_kind = fp.fp_kind in
+  let fp_partial = of_partial fp.fp_partial in
+  let fp_kind = of_function_param_kind fp.fp_kind in
   let fp_newtypes = fp.fp_newtypes in
   let fp_loc = fp.fp_loc in
   { fp_arg_label; fp_param; fp_partial; fp_kind; fp_newtypes; fp_loc }
@@ -224,6 +229,7 @@ and of_function_body : OCaml.function_body -> function_body = function
   | Tfunction_body expr ->
       Tfunction_body { expr }
   | Tfunction_cases { cases; partial; param; loc; exp_extra; attributes } ->
+      let partial = of_partial partial in
       let loc = since_520 loc in
       let exp_extra = since_520 exp_extra in
       let attributes = since_520 attributes in
@@ -264,6 +270,7 @@ and of_class_expr_desc : OCaml.class_expr_desc -> class_expr_desc = function
   | Tcl_ident (path, longid, params) -> Tcl_ident { path; longid; params }
   | Tcl_structure strc -> Tcl_structure { strc }
   | Tcl_fun (arg_label, arg_pattern, arg_pattern_vars, body, partial) ->
+      let partial = of_partial partial in
       Tcl_fun { arg_label; arg_pattern; arg_pattern_vars; body; partial }
   | Tcl_apply (c, args) ->
       Tcl_apply { c; args }
@@ -296,8 +303,10 @@ and of_class_field_desc : OCaml.class_field_desc -> class_field_desc = function
   | Tcf_inherit (over, parent_class, parent_alias, instvars, meths) ->
       Tcf_inherit { over; parent_class; parent_alias; instvars; meths }
   | Tcf_val (name, mut, id, virt, already_declared) ->
+      let virt = of_class_field_kind virt in
       Tcf_val { name; mut; id; virt; already_declared }
   | Tcf_method (name, priv, virt) ->
+      let virt = of_class_field_kind virt in
       Tcf_method { name; priv; virt }
   | Tcf_constraint (type1, type2) -> Tcf_constraint { type1; type2 }
   | Tcf_initializer expr -> Tcf_initializer { expr }
@@ -328,14 +337,18 @@ and of_module_expr_desc : OCaml.module_expr_desc -> module_expr_desc = function
   | Tmod_structure strc ->
       Tmod_structure { strc }
   | Tmod_functor (param, body) ->
+      let param = of_functor_parameter param in
       Tmod_functor { param; body }
   | Tmod_apply (ftor, arg, res_coercion) ->
+      let res_coercion = of_module_coercion res_coercion in
       Tmod_apply { ftor; arg; res_coercion }
   #if OCAML_VERSION < (5, 1, 0)
   #elif OCAML_VERSION >= (5, 1, 0)
   | Tmod_apply_unit ftor -> Tmod_apply_unit { ftor }
   #endif
   | Tmod_constraint (mod_expr, mod_type, constraint_, coercion) ->
+      let constraint_ = of_module_type_constraint constraint_ in
+      let coercion = of_module_coercion coercion in
       Tmod_constraint { mod_expr; mod_type; constraint_; coercion }
   | Tmod_unpack (expr, mod_type) -> Tmod_unpack { expr; mod_type }
 
@@ -401,10 +414,12 @@ and of_module_coercion : OCaml.module_coercion -> module_coercion = function
   | Tcoerce_structure (pos_coercions, id_pos_list) ->
       Tcoerce_structure { pos_coercions; id_pos_list }
   | Tcoerce_functor (arg_coercion, res_coercion) ->
+      let arg_coercion = of_module_coercion arg_coercion in
+      let res_coercion = of_module_coercion res_coercion in
       Tcoerce_functor { arg_coercion; res_coercion }
-  | Tcoerce_primitive coercion ->
-      Tcoerce_primitive { coercion }
+  | Tcoerce_primitive coercion -> Tcoerce_primitive { coercion }
   | Tcoerce_alias (env, path, coercion) ->
+      let coercion = of_module_coercion coercion in
       Tcoerce_alias { env; path; coercion }
 
 and of_module_type : OCaml.module_type -> module_type = fun mty ->
@@ -418,7 +433,9 @@ and of_module_type : OCaml.module_type -> module_type = fun mty ->
 and of_module_type_desc : OCaml.module_type_desc -> module_type_desc = function
   | Tmty_ident (path, longid) -> Tmty_ident { path; longid }
   | Tmty_signature sign -> Tmty_signature { sign }
-  | Tmty_functor (param, res_type) -> Tmty_functor { param; res_type }
+  | Tmty_functor (param, res_type) ->
+      let param = of_functor_parameter param in
+      Tmty_functor { param; res_type }
   | Tmty_with (mod_type, constraints) -> Tmty_with { mod_type; constraints }
   | Tmty_typeof mod_expr -> Tmty_typeof { mod_expr }
   | Tmty_alias (path, longid) -> Tmty_alias { path; longid }
@@ -637,7 +654,7 @@ and of_type_declaration : OCaml.type_declaration -> type_declaration = fun td ->
   let typ_params = td.typ_params in
   let typ_type = td.typ_type in
   let typ_cstrs = td.typ_cstrs in
-  let typ_kind = td.typ_kind in
+  let typ_kind = of_type_kind td.typ_kind in
   let typ_private = td.typ_private in
   let typ_manifest = td.typ_manifest in
   let typ_loc = td.typ_loc in
@@ -686,7 +703,7 @@ and of_constructor_declaration :
   let cd_uid = since_520 cd.cd_uid in
   #endif
   let cd_vars = cd.cd_vars in
-  let cd_args = cd.cd_args in
+  let cd_args = of_constructor_arguments cd.cd_args in
   let cd_res = cd.cd_res in
   let cd_loc = cd.cd_loc in
   let cd_attributes = cd.cd_attributes in
@@ -731,7 +748,7 @@ and of_extension_constructor :
   let ext_id = ec.ext_id in
   let ext_name = ec.ext_name in
   let ext_type = ec.ext_type in
-  let ext_kind = ec.ext_kind in
+  let ext_kind = of_extension_constructor_kind ec.ext_kind in
   let ext_loc = ec.ext_loc in
   let ext_attributes = ec.ext_attributes in
   { ext_id; ext_name; ext_type; ext_kind; ext_loc; ext_attributes }
@@ -740,6 +757,7 @@ and of_extension_constructor_kind :
   OCaml.extension_constructor_kind -> extension_constructor_kind =
   function
   | Text_decl (existentials, arg, res_type) ->
+      let arg = of_constructor_arguments arg in
       Text_decl { existentials; arg; res_type }
   | Text_rebind (path, longid) -> Text_rebind { path; longid }
 

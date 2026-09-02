@@ -350,7 +350,7 @@ and expression_desc =
         cases: Typedtree.computation Typedtree.case list;
         effect_cases:
           (not_available, Typedtree.value Typedtree.case list) ocaml_530;
-        partial: Typedtree.partial;
+        partial: partial;
       }
       (** {[
             match E0 with
@@ -495,7 +495,7 @@ and expression_desc =
 
           [for ... downto do ...] => [{ direction = Downto }]
       *)
-  | Texp_send of { obj: Typedtree.expression; meth: Typedtree.meth }
+  | Texp_send of { obj: Typedtree.expression; meth: meth }
       (** [Eo#m] *)
   | Texp_new of {
         path: Path.t;
@@ -554,7 +554,7 @@ and expression_desc =
         ands: Typedtree.binding_op list;
         param: Ident.t;
         body: Typedtree.value Typedtree.case;
-        partial: Typedtree.partial;
+        partial: partial;
       }
       (** [let* P1 = E1 and+ P2 = E2 ... and* Pn = En in E]
           =>
@@ -603,13 +603,13 @@ and function_param = {
     (** [fp_param] is the identifier that is to be used to name the
         parameter of the function.
     *)
-  fp_partial: Typedtree.partial;
+  fp_partial: partial;
     (**
        [fp_partial] =
        [Partial] if the pattern match is partial
        [Total] otherwise.
     *)
-  fp_kind: Typedtree.function_param_kind;
+  fp_kind: function_param_kind;
   fp_newtypes: string Asttypes.loc list;
     (** [fp_newtypes] are the new type declarations that come *after* that
         parameter. The newtypes that come before the first parameter are
@@ -640,7 +640,7 @@ and function_body =
   | Tfunction_body of { expr: Typedtree.expression } (** Since OCaml 5.2 *)
   | Tfunction_cases of {
         cases: Typedtree.value Typedtree.case list;
-        partial: Typedtree.partial;
+        partial: partial;
         param: Ident.t;
         loc: (not_available, Location.t) ocaml_520;
         exp_extra: (not_available, Typedtree.exp_extra option) ocaml_520;
@@ -709,7 +709,7 @@ and class_expr_desc =
         arg_pattern_vars: (Ident.t * Typedtree.expression) list;
           (** maps all pattern variables to idents for use inside methods *)
         body: Typedtree.class_expr;
-        partial: Typedtree.partial;
+        partial: partial;
       }
       (** [class c P = CE] *)
   | Tcl_apply of {
@@ -780,7 +780,7 @@ and class_field_desc =
         name: string Asttypes.loc;
         mut: Asttypes.mutable_flag;
         id: Ident.t;
-        virt: Typedtree.class_field_kind;
+        virt: class_field_kind;
         already_declared: bool;
       }
       (** [val v = E]
@@ -802,7 +802,7 @@ and class_field_desc =
   | Tcf_method of {
         name: string Asttypes.loc;
         priv: Asttypes.private_flag;
-        virt: Typedtree.class_field_kind;
+        virt: class_field_kind;
       }
       (** [method m = E]
           =>
@@ -868,14 +868,14 @@ and module_expr_desc =
   | Tmod_structure of { strc: Typedtree.structure }
       (** [struct ... end] *)
   | Tmod_functor of {
-        param: Typedtree.functor_parameter;
+        param: functor_parameter;
         body: Typedtree.module_expr
       }
       (** [...(FP) = MEb], [functor (FP) -> MEb] *)
   | Tmod_apply of {
         ftor: Typedtree.module_expr;
         arg: Typedtree.module_expr;
-        res_coercion: Typedtree.module_coercion;
+        res_coercion: module_coercion;
       }
       (** [Mf(Ma)] *)
   | Tmod_apply_unit of { ftor: Typedtree.module_expr }
@@ -885,8 +885,8 @@ and module_expr_desc =
   | Tmod_constraint of {
         mod_expr: Typedtree.module_expr;
         mod_type: Types.module_type;
-        constraint_: Typedtree.module_type_constraint;
-        coercion: Typedtree.module_coercion;
+        constraint_: module_type_constraint;
+        coercion: module_coercion;
       }
       (** [ME]        =>  [{ constraint_ = Tmodtype_implicit }]
           [(ME : MT)] =>  [{ constraint_ = Tmodtype_explicit {mod_type = MT} }]
@@ -1000,8 +1000,8 @@ and module_coercion =
           E.g. [module _ : MT = ME] when [MT ⊂ module type of ME]
       *)
   | Tcoerce_functor of {
-        arg_coercion: Typedtree.module_coercion;
-        res_coercion: Typedtree.module_coercion;
+        arg_coercion: module_coercion;
+        res_coercion: module_coercion;
       }
       (** At least one of the argument or the result is acutally coerced.
           The argument's coercion is reversed. I.e., the source [MT] expects
@@ -1020,7 +1020,7 @@ and module_coercion =
   | Tcoerce_alias of {
         env: Env.t;
         path: Path.t;
-        coercion: Typedtree.module_coercion;
+        coercion: module_coercion;
       }
       (** A submodule is an alias.
           This is always wrapped in a [Tcoerce_structure].
@@ -1040,7 +1040,7 @@ and module_type_desc =
   | Tmty_signature of { sign: Typedtree.signature }
       (** [sig ... end] *)
   | Tmty_functor of {
-        param: Typedtree.functor_parameter;
+        param: functor_parameter;
         res_type: Typedtree.module_type;
       }
       (** [functor (FP) -> MT] *)
@@ -1318,7 +1318,7 @@ and type_declaration = {
     (Typedtree.core_type * (Asttypes.variance * Asttypes.injectivity)) list;
   typ_type: Types.type_declaration;
   typ_cstrs: (Typedtree.core_type * Typedtree.core_type * Location.t) list;
-  typ_kind: Typedtree.type_kind;
+  typ_kind: type_kind;
   typ_private: Asttypes.private_flag;
   typ_manifest: Typedtree.core_type option;
   typ_loc: Location.t;
@@ -1350,7 +1350,7 @@ and constructor_declaration = {
   cd_name: string Asttypes.loc;
   cd_uid: (not_available, Shape.Uid.t) ocaml_520;
   cd_vars: string Asttypes.loc list;
-  cd_args: Typedtree.constructor_arguments;
+  cd_args: constructor_arguments;
   cd_res: Typedtree.core_type option;
   cd_loc: Location.t;
   cd_attributes: Typedtree.attributes;
@@ -1383,7 +1383,7 @@ and extension_constructor = {
   ext_id: Ident.t;
   ext_name: string Asttypes.loc;
   ext_type: Types.extension_constructor;
-  ext_kind: Typedtree.extension_constructor_kind;
+  ext_kind: extension_constructor_kind;
   ext_loc: Location.t;
   ext_attributes: Typedtree.attributes;
 }
@@ -1391,7 +1391,7 @@ and extension_constructor = {
 and extension_constructor_kind =
   | Text_decl of {
         existentials: string Asttypes.loc list;
-        arg: Typedtree.constructor_arguments;
+        arg: constructor_arguments;
         res_type: Typedtree.core_type option (** for GADT *);
       }
       (** [C]
