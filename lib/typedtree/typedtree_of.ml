@@ -1,8 +1,8 @@
 open Typedtree_intf
 
-module OCaml = Vaast_OCaml.Typedtree
+open Vaast_Core.Utils
 
-open Typedtree_utils
+module OCaml = Vaast_OCaml.Typedtree
 
 (* [of_*] conversion functions *)
 

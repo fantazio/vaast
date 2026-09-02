@@ -1,5 +1,6 @@
 open Typedtree_intf
 
+module Utils = Vaast_Core.Utils
 module OCaml = Vaast_OCaml.Typedtree
 
 
@@ -52,7 +53,7 @@ and to_pattern_desc : type k . k pattern_desc -> k OCaml.pattern_desc = function
   (* value patterns *)
   | Tpat_any -> Tpat_any
   | Tpat_var { id; name; uid } ->
-      let open Typedtree_utils in
+      let open Utils in
       #if OCAML_VERSION < (5, 2, 0)
       uid |> is_not_available until_520;
       Tpat_var (id, name)
@@ -61,7 +62,7 @@ and to_pattern_desc : type k . k pattern_desc -> k OCaml.pattern_desc = function
       Tpat_var (id, name, uid)
       #endif
   | Tpat_alias { pat; id; name; uid } ->
-      let open Typedtree_utils in
+      let open Utils in
       let pat = to_general_pattern pat in
       #if OCAML_VERSION < (5, 2, 0)
       uid |> is_not_available until_520;
@@ -199,7 +200,7 @@ and to_expression_desc : expression_desc -> OCaml.expression_desc = function
       in
       Texp_apply (f, args)
   | Texp_match { expr; cases; effect_cases; partial } ->
-      let open Typedtree_utils in
+      let open Utils in
       let expr = to_expression expr in
       let cases = List.map to_case cases in
       let partial = to_partial partial in
@@ -212,7 +213,7 @@ and to_expression_desc : expression_desc -> OCaml.expression_desc = function
       Texp_match (expr, cases, effect_cases, partial)
       #endif
   | Texp_try { expr; cases; effect_cases } ->
-      let open Typedtree_utils in
+      let open Utils in
       let expr = to_expression expr in
       let cases = List.map to_case cases in
       #if OCAML_VERSION < (5, 3, 0)
@@ -298,7 +299,7 @@ and to_expression_desc : expression_desc -> OCaml.expression_desc = function
       let in_ = to_expression in_ in
       Texp_letexception (extension_ctor, in_)
   | Texp_assert { expr; loc } ->
-      let open Typedtree_utils in
+      let open Utils in
       let expr = to_expression expr in
       #if OCAML_VERSION < (5, 1, 0)
       loc |> is_not_available until_510;
@@ -337,7 +338,7 @@ and to_meth : meth -> OCaml.meth = function
 
 and to_case : 'k . 'k case -> 'k OCaml.case = fun case ->
   let c_lhs = to_general_pattern case.c_lhs in
-  let open Typedtree_utils in
+  let open Utils in
   #if OCAML_VERSION < (5, 3, 0)
   case.c_cont |> is_not_available until_530;
   #elif OCAML_VERSION >= (5, 3, 0)
@@ -388,7 +389,7 @@ and to_function_body : function_body -> OCaml.function_body = fun body ->
       let expr = to_expression expr in
       Tfunction_body expr
   | Tfunction_cases { cases; partial; param; loc; exp_extra; attributes } ->
-      let open Typedtree_utils in
+      let open Utils in
       let cases = List.map to_case cases in
       let partial = to_partial partial in
       let loc = get_since_520 loc in
@@ -403,7 +404,7 @@ and to_record_label_definition :
   record_label_definition -> OCaml.record_label_definition =
   function
   | Kept { type_expr; mut } ->
-      let open Typedtree_utils in
+      let open Utils in
       #if OCAML_VERSION < (5, 0, 0)
       mut |> is_not_available until_500;
       Kept type_expr
@@ -650,7 +651,7 @@ and to_structure_item_desc : structure_item_desc -> OCaml.structure_item_desc =
 and to_module_binding : module_binding -> OCaml.module_binding = fun mb ->
   let mb_id = mb.mb_id in
   let mb_name = mb.mb_name in
-  let open Typedtree_utils in
+  let open Utils in
   #if OCAML_VERSION < (5, 2, 0)
   mb.mb_uid |> is_not_available until_520;
   #elif OCAML_VERSION >= (5, 2, 0)
@@ -675,7 +676,7 @@ and to_module_binding : module_binding -> OCaml.module_binding = fun mb ->
 and to_value_binding : value_binding -> OCaml.value_binding = fun vb ->
   let vb_pat = to_pattern vb.vb_pat in
   let vb_expr = to_expression vb.vb_expr in
-  let open Typedtree_utils in
+  let open Utils in
   #if OCAML_VERSION < (5, 2, 0)
   vb.vb_rec_kind |> is_not_available until_520;
   #elif OCAML_VERSION >= (5, 2, 0)
@@ -828,7 +829,7 @@ and to_module_declaration : module_declaration -> OCaml.module_declaration =
   fun md ->
   let md_id = md.md_id in
   let md_name = md.md_name in
-  let open Typedtree_utils in
+  let open Utils in
   #if OCAML_VERSION < (5, 2, 0)
   md.md_uid |> is_not_available until_520;
   #elif OCAML_VERSION >= (5, 2, 0)
@@ -854,7 +855,7 @@ and to_module_substitution : module_substitution -> OCaml.module_substitution =
   fun ms ->
   let ms_id = ms.ms_id in
   let ms_name = ms.ms_name in
-  let open Typedtree_utils in
+  let open Utils in
   #if OCAML_VERSION < (5, 2, 0)
   ms.ms_uid |> is_not_available until_520;
   #elif OCAML_VERSION >= (5, 2, 0)
@@ -881,7 +882,7 @@ and to_module_type_declaration:
   fun mtd ->
   let mtd_id = mtd.mtd_id in
   let mtd_name = mtd.mtd_name in
-  let open Typedtree_utils in
+  let open Utils in
   #if OCAML_VERSION < (5, 2, 0)
   mtd.mtd_uid |> is_not_available until_520;
   #elif OCAML_VERSION >= (5, 2, 0)
@@ -1121,7 +1122,7 @@ and to_label_declaration : label_declaration -> OCaml.label_declaration =
   fun ld ->
   let ld_id = ld.ld_id in
   let ld_name = ld.ld_name in
-  let open Typedtree_utils in
+  let open Utils in
   #if OCAML_VERSION < (5, 2, 0)
   ld.ld_uid |> is_not_available until_520;
   #elif OCAML_VERSION >= (5, 2, 0)
@@ -1148,7 +1149,7 @@ and to_constructor_declaration :
   fun cd ->
   let cd_id = cd.cd_id in
   let cd_name = cd.cd_name in
-  let open Typedtree_utils in
+  let open Utils in
   #if OCAML_VERSION < (5, 2, 0)
   cd.cd_uid |> is_not_available until_520;
   #elif OCAML_VERSION >= (5, 2, 0)
@@ -1316,7 +1317,7 @@ and to_class_infos :
   let ci_id_class = ci.ci_id_class in
   let ci_id_class_type = ci.ci_id_class_type in
   let ci_id_object = ci.ci_id_object in
-  let open Typedtree_utils in
+  let open Utils in
   #if OCAML_VERSION < (5, 1, 0)
   let ci_id_typehash = get_until_510 ci.ci_id_typehash in
   #elif OCAML_VERSION >= (5, 1, 0)
