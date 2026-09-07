@@ -65,6 +65,17 @@ and pat_extra =
   | Tpat_unpack
       (** [(module ...)] *)
 
+(** New types introduced by Vaast to represent T*_tuple fields uniformly *)
+and 'a tuple_field = {
+  label: (not_available, string option) ocaml_540;
+    (** NB: this field has an [ocaml_540] type although it is
+            [not_available] in one case and an [option] in the other.
+            The same reasoning as for {!case.c_cont} can be applied.
+    *)
+  content: 'a;
+}
+and 'a tuple_fields = 'a tuple_field list
+
 and 'k pattern_desc =
   (* value patterns *)
   | Tpat_any : value pattern_desc
@@ -83,24 +94,29 @@ and 'k pattern_desc =
         id: Ident.t;
         name: string Asttypes.loc;
         uid: (not_available, Shape.Uid.t) ocaml_520;
+        var_type : (not_available, Types.type_expr) ocaml_540;
       }
       -> value pattern_desc
-      (** [P as a] *)
+      (** [P as a]
+          [var_type] is the type of [a] which may be different from
+          the type of [P] (see https://github.com/ocaml/ocaml/pull/13763) *)
   | Tpat_constant : { const: Asttypes.constant } -> value pattern_desc
       (** [1], ['a'], ["string"], [1.0], [1l], [1L], [1n]
           /!\ [true] and [false] are constructs, like [()]
       *)
   | Tpat_tuple : {
-        fields: Typedtree.value Typedtree.general_pattern list;
+        fields: (Typedtree.value Typedtree.general_pattern) tuple_fields;
       }
       -> value pattern_desc
-      (** [(P1, ..., Pn)]
+      (** [(P1, ..., Pn)] unlabelled
+          [(L1:P1, ..., Ln:Pn)] labelled
+          [(..., Pi, ..., Lj:Pj, ...)] mixed
 
           Invariant: n >= 2
       *)
   | Tpat_construct : {
         longid: Longident.t Asttypes.loc;
-        ctor_desc: Types.constructor_description;
+        ctor_desc: Vaast_OCaml.Data_types.constructor_description;
         fields: Typedtree.value Typedtree.general_pattern list;
         typing: (Ident.t Asttypes.loc list * Typedtree.core_type) option;
           (** [(existentials * t) option] *)
@@ -127,7 +143,7 @@ and 'k pattern_desc =
   | Tpat_record : {
         fields:
           ( Longident.t Asttypes.loc
-          * Types.label_description
+          * Vaast_OCaml.Data_types.label_description
           * Typedtree.value Typedtree.general_pattern
           ) list;
         closed: Asttypes.closed_flag
@@ -139,6 +155,7 @@ and 'k pattern_desc =
           Invariant: n > 0
       *)
   | Tpat_array : {
+        mut: (not_available, Asttypes.mutable_flag) ocaml_540;
         cells: Typedtree.value Typedtree.general_pattern list;
       }
       -> value pattern_desc
@@ -319,17 +336,31 @@ and expression_desc =
       *)
   | Texp_apply of {
         f: Typedtree.expression;
-        args: (Asttypes.arg_label * Typedtree.expression option) list;
+        args:
+          ( Asttypes.arg_label
+          * (Typedtree.expression option, Typedtree.apply_arg) ocaml_540
+          ) list;
+            (** NB: The argument's values are of [ocaml_540] type. Because
+                it is an [option] in one case, and [apply_arg] (semantically
+                equivalent to option) in the other, the field could be
+                reduced to an [apply_arg] in all cases, with [None]
+                translated to [Omitted ()], and [Some e] to [Arg e].
+                This reduction would avoid an extra wrapping.
+                This is kept as an [ocaml_540] for now for the sake of
+                documenting changes in the type.
+                This is the same reasoning as for
+                {!expression_desc.Texp_match.effect_cases}.
+            *)
       }
       (** [Ef E1 ... En]
-          => [{ f = Ef; args = [(Nolabel, Some E1); ...; (Nolabel, Some En)] }]
+          => [{ f = Ef; args = [(Nolabel, Arg E1); ...; (Nolabel, Arg En)] }]
 
           Among the arguments:
-          - [~l:El] => [(Labelled "l", Some El)]
-          - [?o:Eo] => [(Optional "o", Some Eo)]
+          - [~l:El] => [(Labelled "l", Arg El)]
+          - [?o:Eo] => [(Optional "o", Arg Eo)]
           - [~o:Eo] ~> [?o:(Some Eo)]
           - Implicitly discarded [?o] ~> [?o:None]
-            => [(Optional "o", Some (Texp_construct "None"))]
+            => [(Optional "o", Arg (Texp_construct "None"))]
 
           In the case of a partial application of a function with
           optional or labeled arguments, some arguments (of any kind:
@@ -337,13 +368,13 @@ and expression_desc =
           are not provided a value although they appear ahead of arguments
           with values in the function's type.
           Those skipped arguments are translated to
-          [(Asttypes.arg_label, None)].
+          [(Asttypes.arg_label, Omitted ())].
           E.g.
           {[
             let f x ~y z = x + y + z in
             f ~y:3 (* partial application, [x] is skipped, [z] is not *)
           ]}
-          => [{ args = [(Nolabel, None); (Labelled "y", Some _)] }]
+          => [{ args = [(Nolabel, Omitted ()); (Labelled "y", Arg _)] }]
       *)
   | Texp_match of {
         expr: Typedtree.expression;
@@ -402,11 +433,14 @@ and expression_desc =
               }
             ]}
       *)
-  | Texp_tuple of { fields: Typedtree.expression list }
-      (** [E1, ..., EN] *)
+  | Texp_tuple of { fields: Typedtree.expression tuple_fields }
+      (** [E1, ..., EN] unlabelled
+          [(L1:E1, ..., Ln:En)] labelled
+          [(..., Ei, ..., Lj:Ej, ...)] mixed
+      *)
   | Texp_construct of {
         longid: Longident.t Asttypes.loc;
-        ctor_desc: Types.constructor_description;
+        ctor_desc: Vaast_OCaml.Data_types.constructor_description;
         fields: Typedtree.expression list;
       }
       (** [C]               => [{ fields = [] }]
@@ -422,7 +456,7 @@ and expression_desc =
       *)
   | Texp_record of {
         fields:
-          (Types.label_description * Typedtree.record_label_definition) array;
+          (Vaast_OCaml.Data_types.label_description * Typedtree.record_label_definition) array;
         representation: Types.record_representation;
         extended_expression: Typedtree.expression option;
       }
@@ -440,20 +474,31 @@ and expression_desc =
               }
             ]}
       *)
+  | Texp_atomic_loc of {
+        record : Typedtree.expression;
+        longid: Longident.t Asttypes.loc;
+        desc: Vaast_OCaml.Data_types.label_description;
+      }
+      (** [[%atomic.loc E.f]]
+          [[%ocaml.atomic.loc E.f]]
+      *)
   | Texp_field of {
         record: Typedtree.expression;
         longid: Longident.t Asttypes.loc;
-        desc: Types.label_description;
+        desc: Vaast_OCaml.Data_types.label_description;
       }
       (** [E.f] *)
   | Texp_setfield of {
         record: Typedtree.expression;
         longid: Longident.t Asttypes.loc;
-        desc: Types.label_description;
+        desc: Vaast_OCaml.Data_types.label_description;
         expr: Typedtree.expression;
       }
       (** [Er.f <- Ev] => [{ record = Er; expr = Ev }] *)
-  | Texp_array of { cells: Typedtree.expression list }
+  | Texp_array of {
+        mut: (not_available, Asttypes.mutable_flag) ocaml_540;
+        cells: Typedtree.expression list;
+      }
       (** [[|E1; ...; En|]] *)
   | Texp_ifthenelse of {
         cond: Typedtree.expression;
@@ -575,6 +620,12 @@ and expression_desc =
         in_: Typedtree.expression;
       }
       (** [let open M in E] *)
+
+and ('a, 'b) arg_or_omitted =
+  | Arg of 'a
+  | Omitted of 'b
+
+and apply_arg = (expression, unit) arg_or_omitted
 
 and meth =
   | Tmeth_name of { name: string }
@@ -714,7 +765,21 @@ and class_expr_desc =
       (** [class c P = CE] *)
   | Tcl_apply of {
         c: Typedtree.class_expr;
-        args: (Asttypes.arg_label * Typedtree.expression option) list;
+        args:
+          ( Asttypes.arg_label
+          * (Typedtree.expression option, Typedtree.apply_arg) ocaml_540
+          ) list;
+            (** NB: The argument's values are of [ocaml_540] type. Because
+                it is an [option] in one case, and [apply_arg] (semantically
+                equivalent to option) in the other, the field could be
+                reduced to an [apply_arg] in all cases, with [None]
+                translated to [Omitted ()], and [Some e] to [Arg e].
+                This reduction would avoid an extra wrapping.
+                This is kept as an [ocaml_540] for now for the sake of
+                documenting changes in the type.
+                This is the same reasoning as for
+                {!expression_desc.Texp_match.effect_cases}.
+            *)
       }
       (** [c E1 ... En]. Similar to {!Texp_apply} *)
   | Tcl_let of {
@@ -1200,8 +1265,11 @@ and core_type_desc =
         res_type: Typedtree.core_type;
       }
       (** [t1 -> t2], [~l:t1 -> t2], [?o:t1 -> t2] *)
-  | Ttyp_tuple of { fields: Typedtree.core_type list }
-      (** [(t1 * ... * t2)] *)
+  | Ttyp_tuple of { fields: Typedtree.core_type tuple_fields }
+      (** [(t1 * ... * t2)] unlabelled
+          [(L1:t1, ..., Ln:tn)] labelled
+          [(... * ti * ... * Lj:tj * ...)] mixed
+      *)
   | Ttyp_constr of {
         path: Path.t;
         longid: Longident.t Asttypes.loc;
@@ -1340,6 +1408,7 @@ and label_declaration = {
   ld_name: string Asttypes.loc;
   ld_uid: (not_available, Shape.Uid.t) ocaml_520;
   ld_mutable: Asttypes.mutable_flag;
+  ld_atomic: (not_available, Vaast_OCaml.Asttypes.atomic_flag) ocaml_540;
   ld_type: Typedtree.core_type;
   ld_loc: Location.t;
   ld_attributes: Typedtree.attributes;
