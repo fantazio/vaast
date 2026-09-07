@@ -22,7 +22,7 @@
  (synopsis "Typedtree for all versions")
  (license MIT)
  (depends
-  (ocaml (and (>= 4.14) (< 5.4)))
+  (ocaml (and (>= 4.14) (< 5.5)))
   cppo
  )
 )

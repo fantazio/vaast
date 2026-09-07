@@ -18,6 +18,30 @@ let of_value : OCaml.value -> value = Fun.id
 
 let of_computation : OCaml.computation -> computation = Fun.id
 
+(** CAUTION: [of_tuple_field] has a version-dependent type *)
+#if OCAML_VERSION < (5, 4, 0)
+let of_tuple_field content =
+  let label = not_available until_540 in
+  { label; content }
+#elif OCAML_VERSION >= (5, 4, 0)
+let of_tuple_field (label, content) =
+  let label = since_540 label in
+  { label; content }
+#endif
+
+let of_tuple_fields fields = List.map of_tuple_field fields
+
+(** CAUTION: [of_arg] has a version-dependent type *)
+let of_arg (l, arg) =
+  #if OCAML_VERSION < (5, 4, 0)
+  let arg = until_540 arg in
+  #elif OCAML_VERSION >= (5, 4, 0)
+  let arg = since_540 arg in
+  #endif
+  (l, arg)
+
+let of_args args = List.map of_arg args
+
 let rec of_pattern : OCaml.pattern -> pattern = fun pat ->
   of_general_pattern pat
 
@@ -55,21 +79,38 @@ and of_pattern_desc : type k . k OCaml.pattern_desc -> k pattern_desc = function
   #if OCAML_VERSION < (5, 2, 0)
   | Tpat_alias (pat, id, name) ->
       let uid = not_available until_520 in
-      Tpat_alias { pat; id; name; uid }
-  #elif OCAML_VERSION >= (5, 2, 0)
+      let var_type = not_available until_540 in
+      Tpat_alias { pat; id; name; uid; var_type }
+  #elif OCAML_VERSION >= (5, 2, 0) && OCAML_VERSION < (5, 4, 0)
   | Tpat_alias (pat, id, name, uid) ->
       let uid = since_520 uid in
-      Tpat_alias { pat; id; name; uid }
+      let var_type = not_available until_540 in
+      Tpat_alias { pat; id; name; uid; var_type }
+  #elif OCAML_VERSION >= (5, 4, 0)
+  | Tpat_alias (pat, id, name, uid, var_type) ->
+      let uid = since_520 uid in
+      let var_type = since_540 var_type in
+      Tpat_alias { pat; id; name; uid; var_type }
   #endif
   | Tpat_constant const -> Tpat_constant { const }
-  | Tpat_tuple fields -> Tpat_tuple { fields }
+  | Tpat_tuple fields ->
+      let fields = of_tuple_fields fields in
+      Tpat_tuple { fields }
   | Tpat_construct (longid, ctor_desc, fields, typing) ->
       Tpat_construct { longid; ctor_desc; fields; typing }
   | Tpat_variant (label, pat, row_desc) ->
       (* XXX: reusing the same row_desc, which is a ref *)
       Tpat_variant { label; pat; row_desc }
   | Tpat_record (fields, closed) -> Tpat_record { fields; closed }
-  | Tpat_array cells -> Tpat_array { cells }
+  #if OCAML_VERSION < (5, 4, 0)
+  | Tpat_array cells ->
+      let mut = not_available until_540 in
+      Tpat_array { mut; cells }
+  #elif OCAML_VERSION >= (5, 4, 0)
+  | Tpat_array (mut, cells) ->
+      let mut = since_540 mut in
+      Tpat_array { mut; cells }
+  #endif
   | Tpat_lazy pat -> Tpat_lazy { pat }
   (* computation patterns *)
   | Tpat_value pat -> Tpat_value { pat }
@@ -119,7 +160,9 @@ and of_expression_desc : OCaml.expression_desc -> expression_desc = function
       let body = of_function_body body in
       Texp_function { params; body }
   #endif
-  | Texp_apply (f, args) -> Texp_apply { f; args }
+  | Texp_apply (f, args) ->
+      let args = of_args args in
+      Texp_apply { f; args }
   #if OCAML_VERSION < (5, 3, 0)
   | Texp_match (expr, cases, partial) ->
       let effect_cases = not_available until_530 in
@@ -140,16 +183,31 @@ and of_expression_desc : OCaml.expression_desc -> expression_desc = function
       let effect_cases = since_530 effect_cases in
       Texp_try { expr; cases; effect_cases }
   #endif
-  | Texp_tuple fields -> Texp_tuple { fields }
+  | Texp_tuple fields ->
+      let fields = of_tuple_fields fields in
+      Texp_tuple { fields }
   | Texp_construct (longid, ctor_desc, fields) ->
       Texp_construct { longid; ctor_desc; fields }
   | Texp_variant (label, expr) -> Texp_variant { label; expr }
   | Texp_record { fields; representation; extended_expression } ->
       Texp_record { fields; representation; extended_expression }
+  #if OCAML_VERSION < (5, 4, 0)
+  #elif OCAML_VERSION >= (5, 4, 0)
+  | Texp_atomic_loc (record, longid, desc) ->
+      Texp_atomic_loc { record; longid; desc }
+  #endif
   | Texp_field (record, longid, desc) -> Texp_field { record; longid; desc }
   | Texp_setfield (record, longid, desc, expr) ->
       Texp_setfield { record; longid; desc; expr }
-  | Texp_array cells -> Texp_array { cells }
+  #if OCAML_VERSION < (5, 4, 0)
+  | Texp_array cells ->
+      let mut = not_available until_540 in
+      Texp_array { mut; cells }
+  #elif OCAML_VERSION >= (5, 4, 0)
+  | Texp_array (mut, cells) ->
+      let mut = since_540 mut in
+      Texp_array { mut; cells }
+  #endif
   | Texp_ifthenelse (cond, then_, else_) ->
       Texp_ifthenelse { cond; then_; else_}
   | Texp_sequence (expr1, expr2) -> Texp_sequence { expr1; expr2 }
@@ -273,6 +331,7 @@ and of_class_expr_desc : OCaml.class_expr_desc -> class_expr_desc = function
       let partial = of_partial partial in
       Tcl_fun { arg_label; arg_pattern; arg_pattern_vars; body; partial }
   | Tcl_apply (c, args) ->
+      let args = of_args args in
       Tcl_apply { c; args }
   | Tcl_let (rec_, bindings, vars, class_expr) ->
       Tcl_let { rec_; bindings; vars; class_expr }
@@ -588,7 +647,9 @@ and of_core_type_desc : OCaml.core_type_desc -> core_type_desc = function
   | Ttyp_var name -> Ttyp_var { name }
   | Ttyp_arrow (arg_label, arg_type, res_type) ->
       Ttyp_arrow { arg_label; arg_type; res_type }
-  | Ttyp_tuple fields -> Ttyp_tuple { fields }
+  | Ttyp_tuple fields ->
+      let fields = of_tuple_fields fields in
+      Ttyp_tuple { fields }
   | Ttyp_constr (path, longid, params) ->
       Ttyp_constr { path; longid; params }
   | Ttyp_object (fields, closed) -> Ttyp_object { fields; closed }
@@ -610,10 +671,17 @@ and of_core_type_desc : OCaml.core_type_desc -> core_type_desc = function
   #endif
 
 and of_package_type : OCaml.package_type -> package_type = fun pt ->
+  #if OCAML_VERSION < (5, 4, 0)
   let pack_path = pt.pack_path in
   let pack_fields = pt.pack_fields in
   let pack_type = pt.pack_type in
   let pack_txt = pt.pack_txt in
+  #elif OCAML_VERSION >= (5, 4, 0)
+  let pack_path = pt.tpt_path in
+  let pack_fields = pt.tpt_cstrs in
+  let pack_type = pt.tpt_type in
+  let pack_txt = pt.tpt_txt in
+  #endif
   { pack_path; pack_fields; pack_type; pack_txt }
 
 and of_row_field : OCaml.row_field -> row_field = fun rf ->
@@ -687,10 +755,23 @@ and of_label_declaration : OCaml.label_declaration -> label_declaration =
   let ld_uid = since_520 ld.ld_uid in
   #endif
   let ld_mutable = ld.ld_mutable in
+  #if OCAML_VERSION < (5, 4, 0)
+  let ld_atomic = not_available until_540 in
+  #elif OCAML_VERSION >= (5, 4, 0)
+  let ld_atomic = since_540 ld.ld_atomic in
+  #endif
   let ld_type = ld.ld_type in
   let ld_loc = ld.ld_loc in
   let ld_attributes = ld.ld_attributes in
-  { ld_id; ld_name; ld_uid; ld_mutable; ld_type; ld_loc; ld_attributes }
+  { ld_id;
+    ld_name;
+    ld_uid;
+    ld_mutable;
+    ld_atomic;
+    ld_type;
+    ld_loc;
+    ld_attributes
+  }
 
 and of_constructor_declaration :
   OCaml.constructor_declaration -> constructor_declaration =

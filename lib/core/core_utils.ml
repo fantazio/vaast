@@ -14,6 +14,9 @@ let since_520 x = Since_520 x
 let until_530 x = Until_530 x
 let since_530 x = Since_530 x
 
+let until_540 x = Until_540 x
+let since_540 x = Since_540 x
+
 let not_available version = version NA
 
 let is_not_available version v =
@@ -38,3 +41,7 @@ let get_since_520 = function
 let get_since_530 = function
   | Until_530 NA -> assert false
   | Since_530 x -> x
+
+let get_since_540 = function
+  | Until_540 NA -> assert false
+  | Since_540 x -> x
