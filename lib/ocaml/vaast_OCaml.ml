@@ -42,6 +42,20 @@ module Typedtree = struct
   #endif
 end
 
+module Types = struct
+  include Types
+
+  (* types introduced in subsequent versions of OCaml *)
+
+  #if OCAML_VERSION < (5, 4, 0)
+  type package = {
+    pack_path : Path.t;
+    pack_cstrs : (string list * type_expr) list;
+  }
+  #elif OCAML_VERSION >= (5, 4, 0)
+  #endif
+end
+
 module Asttypes = struct
   #if OCAML_VERSION < (5, 3, 0)
   (* Module Asttypes did not have an implementation until OCaml 5.3,

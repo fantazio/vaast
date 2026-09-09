@@ -28,3 +28,7 @@ type ('until, 'since) ocaml_530 =
 type ('until, 'since) ocaml_540 =
   | Until_540 of 'until (** type until 5.4.0 excluded *)
   | Since_540 of 'since (** type since 5.4.0 included *)
+
+type ('until, 'since) ocaml_550 =
+  | Until_550 of 'until (** type until 5.5.0 excluded *)
+  | Since_550 of 'since (** type since 5.5.0 included *)

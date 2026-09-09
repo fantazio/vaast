@@ -62,8 +62,12 @@ and pat_extra =
       *)
   | Tpat_open of { path: Path.t; longid: Longident.t Asttypes.loc; env: Env.t }
       (** [M.(...)] => [{ path = M; longid = "M" }] *)
-  | Tpat_unpack
-      (** [(module ...)] *)
+  | Tpat_unpack of {
+        pack_type : (not_available, Typedtree.package_type option) ocaml_550;
+      }
+      (** [(module ... : S)] => [{ pack_type = Some S }]
+          [(module ...)] => [{ pack_type = None }]
+      *)
 
 (** New types introduced by Vaast to represent T*_tuple fields uniformly *)
 and 'a tuple_field = {
@@ -224,6 +228,29 @@ and exp_extra =
       (** Used for method bodies. *)
   | Texp_newtype of { name: string }
       (** [fun (type t) -> ...] *)
+
+(** New type introduced by Vaast to represent Texp_struct_item uniformly.
+    This new constructor introduced in OCaml 5.5 replaces and extends the
+    three constructors of this type: Texp_letmodule, Texp_letexception,
+    and Texp_open.
+    (see https://github.com/ocaml/ocaml/pull/13839)
+*)
+and texp_struct_item =
+  | Texp_letmodule of {
+        id: Ident.t option;
+        name: string option Asttypes.loc;
+        presence: Types.module_presence;
+        mod_expr: Typedtree.module_expr;
+      }
+      (** [let module M = ME in ...] *)
+  | Texp_letexception of {
+        extension_ctor: Typedtree.extension_constructor;
+      }
+      (** [let exception C in ...] *)
+  | Texp_open of {
+        open_decl: Typedtree.open_declaration;
+      }
+      (** [let open M in ...] *)
 
 and expression_desc =
   | Texp_ident of {
@@ -567,19 +594,6 @@ and expression_desc =
           (Ident.t * string Asttypes.loc * Typedtree.expression) list;
       }
       (** [{<var1 = E1; ...; varn = En>}] *)
-  | Texp_letmodule of {
-        id: Ident.t option;
-        name: string option Asttypes.loc;
-        presence: Types.module_presence;
-        mod_expr: Typedtree.module_expr;
-        in_: Typedtree.expression;
-      }
-      (** [let module M = ME in E] *)
-  | Texp_letexception of {
-        extension_ctor: Typedtree.extension_constructor;
-        in_: Typedtree.expression;
-      }
-      (** [let exception C in E] *)
   | Texp_assert of {
         expr: Typedtree.expression;
         loc: (not_available, Location.t) ocaml_510
@@ -615,11 +629,17 @@ and expression_desc =
   | Texp_extension_constructor of
       { longid: Longident.t Asttypes.loc; path: Path.t }
       (** [[%id]] *)
-  | Texp_open of {
-        open_decl: Typedtree.open_declaration;
+  | Texp_struct_item of
+      {
+        struct_item: (texp_struct_item, Typedtree.structure_item) ocaml_550;
         in_: Typedtree.expression;
       }
-      (** [let open M in E] *)
+      (** [let SI in E].
+          Replaces the 3 dedicated constructors that existed in OCaml < 5.5
+          (see {!texp_struct_item}).
+          [SI] is not a value binding. Value bindings are represented by
+          Texp_let above.
+      *)
 
 and ('a, 'b) arg_or_omitted =
   | Arg of 'a
@@ -1264,7 +1284,7 @@ and core_type_desc =
         arg_type: Typedtree.core_type;
         res_type: Typedtree.core_type;
       }
-      (** [t1 -> t2], [~l:t1 -> t2], [?o:t1 -> t2] *)
+      (** [t1 -> t2], [l:t1 -> t2], [?o:t1 -> t2] *)
   | Ttyp_tuple of { fields: Typedtree.core_type tuple_fields }
       (** [(t1 * ... * t2)] unlabelled
           [(L1:t1, ..., Ln:tn)] labelled
@@ -1329,11 +1349,23 @@ and core_type_desc =
         type_: Typedtree.core_type
       }
       (** [M.(t) *)
+  | Ttyp_functor of {
+        arg_label: Asttypes.arg_label;
+        arg_name: Ident.t Asttypes.loc;
+        arg_type: Typedtree.package_type;
+        res_type: Typedtree.core_type;
+      }
+      (** [(module M : S) -> ...]
+          [l:(module M : S) -> ...]
+          The [arg_label] cannot be Optional (i.e. not [?o]).
+          Modular explicits; since OCaml 5.5 (see
+          https://github.com/ocaml/ocaml/pull/13275)
+      *)
 
 and package_type = {
   pack_path: Path.t;
   pack_fields: (Longident.t Asttypes.loc * Typedtree.core_type) list;
-  pack_type: Types.module_type;
+  pack_type: (Types.module_type, Vaast_OCaml.Types.package) ocaml_550;
   pack_txt: Longident.t Asttypes.loc;
 }
 
@@ -1402,6 +1434,11 @@ and type_kind =
       (** [type t = { ... }] *)
   | Ttype_open
       (** [type t = ..] *)
+  | Ttype_external of { name : string }
+      (** [type t = external "name"]
+          External types; since OCaml 5.5 (see
+          https://github.com/ocaml/ocaml/pull/13712)
+      *)
 
 and label_declaration = {
   ld_id: Ident.t;
