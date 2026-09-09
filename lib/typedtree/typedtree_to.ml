@@ -70,7 +70,15 @@ and to_pat_extra : pat_extra -> OCaml.pat_extra = function
   | Tpat_constraint { type_ } -> Tpat_constraint type_
   | Tpat_type { path; longid } -> Tpat_type (path, longid)
   | Tpat_open { path; longid; env } -> Tpat_open (path, longid, env)
-  | Tpat_unpack -> Tpat_unpack
+  | Tpat_unpack { pack_type } ->
+      let open Utils in
+      #if OCAML_VERSION < (5, 5, 0)
+      pack_type |> is_not_available until_550;
+      Tpat_unpack
+      #elif OCAML_VERSION >= (5, 5, 0)
+      let pack_type = get_since_550 pack_type in
+      Tpat_unpack pack_type
+      #endif
 
 and to_pattern_desc : type k . k pattern_desc -> k OCaml.pattern_desc = function
   (* value patterns *)
@@ -247,10 +255,6 @@ and to_expression_desc : expression_desc -> OCaml.expression_desc = function
       Texp_setinstvar (class_path, var_path, name, expr)
   | Texp_override { class_path; instvar_changes } ->
       Texp_override (class_path, instvar_changes)
-  | Texp_letmodule { id; name; presence; mod_expr; in_ } ->
-      Texp_letmodule (id, name, presence, mod_expr, in_)
-  | Texp_letexception { extension_ctor; in_ } ->
-      Texp_letexception (extension_ctor, in_)
   | Texp_assert { expr; loc } ->
       let open Utils in
       #if OCAML_VERSION < (5, 1, 0)
@@ -269,7 +273,28 @@ and to_expression_desc : expression_desc -> OCaml.expression_desc = function
   | Texp_unreachable -> Texp_unreachable
   | Texp_extension_constructor { longid; path } ->
       Texp_extension_constructor (longid, path)
-  | Texp_open { open_decl; in_ } -> Texp_open (open_decl, in_)
+  | Texp_struct_item { struct_item; in_ } ->
+      #if OCAML_VERSION < (5, 5, 0)
+      let texp_struct_item =
+        match struct_item with
+        | Until_550 texp_struct_item -> texp_struct_item
+        | Since_550 _ -> assert false
+      in
+      begin match texp_struct_item with
+        | Texp_letmodule { id; name; presence; mod_expr } ->
+            Texp_letmodule (id, name, presence, mod_expr, in_)
+        | Texp_letexception { extension_ctor } ->
+            Texp_letexception (extension_ctor, in_)
+        | Texp_open { open_decl } -> Texp_open (open_decl, in_)
+      end
+      #elif OCAML_VERSION >= (5, 5, 0)
+      let struct_item =
+        match struct_item with
+        | Until_550 _ -> assert false
+        | Since_550 struct_item -> struct_item
+      in
+      Texp_struct_item (struct_item, in_)
+      #endif
 
 and to_meth : meth -> OCaml.meth = function
   | Tmeth_name { name } -> Tmeth_name name
@@ -778,20 +803,52 @@ and to_core_type_desc : core_type_desc -> OCaml.core_type_desc = function
       #elif OCAML_VERSION >= (5, 2, 0)
       Ttyp_open (path, longid, type_)
       #endif
+  | Ttyp_functor { arg_label; arg_name; arg_type; res_type } ->
+      #if OCAML_VERSION < (5, 5, 0)
+      (* Ttyp_functor was introduced in OCaml 5.5 *)
+      ignore arg_label; (* remove warning 27 *)
+      ignore arg_name; (* remove warning 27 *)
+      ignore arg_type; (* remove warning 27 *)
+      ignore res_type; (* remove warning 27 *)
+      assert false
+      #elif OCAML_VERSION >= (5, 5, 0)
+      Ttyp_functor (arg_label, arg_name, arg_type, res_type)
+      #endif
 
 and to_package_type : package_type -> OCaml.package_type = fun pt ->
+  (* version-dependent field type *)
+  #if OCAML_VERSION < (5, 5, 0)
+  let pack_type =
+    match pt.pack_type with
+    | Until_550 pack_type -> pack_type
+    | Since_550 _ -> assert false
+  in
+  #elif OCAML_VERSION >= (5, 5, 0)
+  let pack_type =
+    match pt.pack_type with
+    | Until_550 _ -> assert false
+    | Since_550 pack_type -> pack_type
+  in
+  #endif
+  (* version-dependent field names *)
   #if OCAML_VERSION < (5, 4, 0)
   let pack_path = pt.pack_path in
-  let pack_fields = pt.pack_fields in
-  let pack_type = pt.pack_type in
+  let pack_type = pack_type in
   let pack_txt = pt.pack_txt in
-  { pack_path; pack_fields; pack_type; pack_txt }
   #elif OCAML_VERSION >= (5, 4, 0)
   let tpt_path = pt.pack_path in
-  let tpt_cstrs = pt.pack_fields in
-  let tpt_type = pt.pack_type in
+  let tpt_type = pack_type in
   let tpt_txt = pt.pack_txt in
+  #endif
+  #if OCAML_VERSION < (5, 4, 0)
+  let pack_fields = pt.pack_fields in
+  { pack_path; pack_fields; pack_type; pack_txt }
+  #elif OCAML_VERSION >= (5, 4, 0) && OCAML_VERSION < (5, 5, 0)
+  let tpt_cstrs = pt.pack_fields in
   { tpt_path; tpt_cstrs; tpt_type; tpt_txt }
+  #elif OCAML_VERSION >= (5, 5, 0)
+  let tpt_constraints = pt.pack_fields in
+  { tpt_path; tpt_constraints; tpt_type; tpt_txt }
   #endif
 
 and to_row_field : row_field -> OCaml.row_field = fun rf ->
@@ -831,7 +888,11 @@ and to_type_declaration : type_declaration -> OCaml.type_declaration = fun td ->
   let typ_name = td.typ_name in
   let typ_params = td.typ_params in
   let typ_type = td.typ_type in
+  #if OCAML_VERSION < (5, 5, 0)
   let typ_cstrs = td.typ_cstrs in
+  #elif OCAML_VERSION >= (5, 5, 0)
+  let typ_constraints = td.typ_cstrs in
+  #endif
   let typ_kind = to_type_kind td.typ_kind in
   let typ_private = td.typ_private in
   let typ_manifest = td.typ_manifest in
@@ -841,7 +902,11 @@ and to_type_declaration : type_declaration -> OCaml.type_declaration = fun td ->
     typ_name;
     typ_params;
     typ_type;
+    #if OCAML_VERSION < (5, 5, 0)
     typ_cstrs;
+    #elif OCAML_VERSION >= (5, 5, 0)
+    typ_constraints;
+    #endif
     typ_kind;
     typ_private;
     typ_manifest;
@@ -854,6 +919,14 @@ and to_type_kind : type_kind -> OCaml.type_kind = function
   | Ttype_variant { ctor_decls } -> Ttype_variant ctor_decls
   | Ttype_record { label_decls } -> Ttype_record label_decls
   | Ttype_open -> Ttype_open
+  | Ttype_external { name } ->
+      #if OCAML_VERSION < (5, 5, 0)
+      (* Ttype_external was introduced in OCaml 5.5 *)
+      ignore name; (* remove warning 27 *)
+      assert false;
+      #elif OCAML_VERSION >= (5, 5, 0)
+      Ttype_external name
+      #endif
 
 and to_label_declaration : label_declaration -> OCaml.label_declaration =
   fun ld ->
