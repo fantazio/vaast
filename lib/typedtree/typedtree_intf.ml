@@ -63,7 +63,7 @@ and pat_extra =
   | Tpat_open of { path: Path.t; longid: Longident.t Asttypes.loc; env: Env.t }
       (** [M.(...)] => [{ path = M; longid = "M" }] *)
   | Tpat_unpack of {
-        pack_type : (not_available, Typedtree.package_type option) ocaml_550;
+        pack_type : (not_available, Typedtree.package_type option) ocaml_505;
       }
       (** [(module ... : S)] => [{ pack_type = Some S }]
           [(module ...)] => [{ pack_type = None }]
@@ -71,8 +71,8 @@ and pat_extra =
 
 (** New types introduced by Vaast to represent T*_tuple fields uniformly *)
 and 'a tuple_field = {
-  label: (not_available, string option) ocaml_540;
-    (** NB: this field has an [ocaml_540] type although it is
+  label: (not_available, string option) ocaml_504;
+    (** NB: this field has an [ocaml_504] type although it is
             [not_available] in one case and an [option] in the other.
             The same reasoning as for {!case.c_cont} can be applied.
     *)
@@ -87,7 +87,7 @@ and 'k pattern_desc =
   | Tpat_var : {
         id: Ident.t;
         name: string Asttypes.loc;
-        uid: (not_available, Shape.Uid.t) ocaml_520;
+        uid: (not_available, Shape.Uid.t) ocaml_502;
       }
       -> value pattern_desc
       (** [x]
@@ -97,8 +97,8 @@ and 'k pattern_desc =
         pat: Typedtree.value Typedtree.general_pattern;
         id: Ident.t;
         name: string Asttypes.loc;
-        uid: (not_available, Shape.Uid.t) ocaml_520;
-        var_type : (not_available, Types.type_expr) ocaml_540;
+        uid: (not_available, Shape.Uid.t) ocaml_502;
+        var_type : (not_available, Types.type_expr) ocaml_504;
       }
       -> value pattern_desc
       (** [P as a]
@@ -159,7 +159,7 @@ and 'k pattern_desc =
           Invariant: n > 0
       *)
   | Tpat_array : {
-        mut: (not_available, Asttypes.mutable_flag) ocaml_540;
+        mut: (not_available, Asttypes.mutable_flag) ocaml_504;
         cells: Typedtree.value Typedtree.general_pattern list;
       }
       -> value pattern_desc
@@ -282,7 +282,7 @@ and expression_desc =
           [let rec ... and ...] => [{ rec_ = Recursive }]
       *)
   | Texp_function of {
-        params: (Asttypes.arg_label, Typedtree.function_param list) ocaml_520;
+        params: (Asttypes.arg_label, Typedtree.function_param list) ocaml_502;
         body: function_body;
       }
       (** Prior to 5.2, [fun] and [function] constructs were represented
@@ -311,7 +311,7 @@ and expression_desc =
             [function P1 -> E1 | ... | Pn -> En ]
             =>
               {[
-                { params = Since_520 [];
+                { params = Since_502 [];
                   body = Tfunction_cases { cases = [P1 -> E1; ...; Pn -> En] };
                 }
               ]}
@@ -320,7 +320,7 @@ and expression_desc =
             =>
               {[
                 params =
-                  Since_520 [
+                  Since_502 [
                       { fp_arg_label = Nolabel; fp_kind = Tparam_pat P }
                     ]
               ]}
@@ -333,7 +333,7 @@ and expression_desc =
             => [fp_kind = Tparam_optional_default { pat = P; default = E }]
 
             [fun P1 ... Pn -> ...]
-            => [{ params = Since_520 [P1; P2; ...; Pn] }]
+            => [{ params = Since_502 [P1; P2; ...; Pn] }]
 
             [fun ... -> function P1 -> E1 | ... | Pn -> En ]
             => [body = Tfunction_cases { cases = [P1 -> E1; ...; Pn -> En] }]
@@ -345,7 +345,7 @@ and expression_desc =
             [function P1 -> E1 | ... | Pn -> En ]
             =>
               {[
-                { params = Until_520 Nolabel;
+                { params = Until_502 Nolabel;
                   body = Tfunction_cases { cases = [P1 -> E1; ...; Pn -> En] };
                 }
               ]}
@@ -353,27 +353,27 @@ and expression_desc =
             [fun P -> E]
             =>
               {[
-                { params = Until_520 Nolabel;
+                { params = Until_502 Nolabel;
                   body = Tfunction_cases { cases = [P -> E] };
                 }
               ]}
 
-            [fun ~l:P -> E] => [{ params = Until_520 (Labelled "l") }]
-            [fun ?l:P -> E] => [{ params = Until_520 (Optional "l") }]
+            [fun ~l:P -> E] => [{ params = Until_502 (Labelled "l") }]
+            [fun ?l:P -> E] => [{ params = Until_502 (Optional "l") }]
       *)
   | Texp_apply of {
         f: Typedtree.expression;
         args:
           ( Asttypes.arg_label
-          * (Typedtree.expression option, Typedtree.apply_arg) ocaml_540
+          * (Typedtree.expression option, Typedtree.apply_arg) ocaml_504
           ) list;
-            (** NB: The argument's values are of [ocaml_540] type. Because
+            (** NB: The argument's values are of [ocaml_504] type. Because
                 it is an [option] in one case, and [apply_arg] (semantically
                 equivalent to option) in the other, the field could be
                 reduced to an [apply_arg] in all cases, with [None]
                 translated to [Omitted ()], and [Some e] to [Arg e].
                 This reduction would avoid an extra wrapping.
-                This is kept as an [ocaml_540] for now for the sake of
+                This is kept as an [ocaml_504] for now for the sake of
                 documenting changes in the type.
                 This is the same reasoning as for
                 {!expression_desc.Texp_match.effect_cases}.
@@ -407,7 +407,7 @@ and expression_desc =
         expr: Typedtree.expression;
         cases: Typedtree.computation Typedtree.case list;
         effect_cases:
-          (not_available, Typedtree.value Typedtree.case list) ocaml_530;
+          (not_available, Typedtree.value Typedtree.case list) ocaml_503;
         partial: partial;
       }
       (** {[
@@ -429,11 +429,11 @@ and expression_desc =
               }
             ]}
 
-          NB: the [effect_cases] has an [ocaml_530] type. Because it is
+          NB: the [effect_cases] has an [ocaml_503] type. Because it is
               [not_available] in one case and a [list] in the other, the
               field could be reduced to a list in all cases, always empty
               in the first. This reduction would avoid an extra wrapping.
-              This is kept as an [ocaml_530] for now for the sake of
+              This is kept as an [ocaml_503] for now for the sake of
               documenting changes in the type.
               The same comment applies to [Texp_try] below.
       *)
@@ -441,7 +441,7 @@ and expression_desc =
         expr: Typedtree.expression;
         cases: Typedtree.value Typedtree.case list;
         effect_cases:
-          (not_available, Typedtree.value Typedtree.case list) ocaml_530;
+          (not_available, Typedtree.value Typedtree.case list) ocaml_503;
       }
       (** {[
             try E0 with
@@ -523,7 +523,7 @@ and expression_desc =
       }
       (** [Er.f <- Ev] => [{ record = Er; expr = Ev }] *)
   | Texp_array of {
-        mut: (not_available, Asttypes.mutable_flag) ocaml_540;
+        mut: (not_available, Asttypes.mutable_flag) ocaml_504;
         cells: Typedtree.expression list;
       }
       (** [[|E1; ...; En|]] *)
@@ -596,7 +596,7 @@ and expression_desc =
       (** [{<var1 = E1; ...; varn = En>}] *)
   | Texp_assert of {
         expr: Typedtree.expression;
-        loc: (not_available, Location.t) ocaml_510
+        loc: (not_available, Location.t) ocaml_501
       }
       (** [assert E] *)
   | Texp_lazy of { expr: Typedtree.expression }
@@ -631,7 +631,7 @@ and expression_desc =
       (** [[%id]] *)
   | Texp_struct_item of
       {
-        struct_item: (texp_struct_item, Typedtree.structure_item) ocaml_550;
+        struct_item: (texp_struct_item, Typedtree.structure_item) ocaml_505;
         in_: Typedtree.expression;
       }
       (** [let SI in E].
@@ -654,12 +654,12 @@ and meth =
 
 and 'k case = {
   c_lhs: 'k Typedtree.general_pattern;
-  c_cont: (not_available, Ident.t option) ocaml_530;
-    (** NB: this field has an [ocaml_530] type. Because it is
+  c_cont: (not_available, Ident.t option) ocaml_503;
+    (** NB: this field has an [ocaml_503] type. Because it is
             [not_available] in one case and a [option] in the other, the
             field could be reduced to an option in all cases, always [None]
             in the first. This reduction would avoid an extra wrapping.
-            This is kept as an [ocaml_530] for now for the sake of
+            This is kept as an [ocaml_503] for now for the sake of
             documenting changes in the type.
             This is the same reasoning as for
             {!expression_desc.Texp_match.effect_cases}.
@@ -713,16 +713,16 @@ and function_body =
         cases: Typedtree.value Typedtree.case list;
         partial: partial;
         param: Ident.t;
-        loc: (not_available, Location.t) ocaml_520;
-        exp_extra: (not_available, Typedtree.exp_extra option) ocaml_520;
-          (** NB: this field has an [ocaml_520] type although it is
+        loc: (not_available, Location.t) ocaml_502;
+        exp_extra: (not_available, Typedtree.exp_extra option) ocaml_502;
+          (** NB: this field has an [ocaml_502] type although it is
                   [not_available] in one case and an [option] in the other.
                   The same reasoning as for {!case.c_cont} can be applied.
                   The same reasoning could also be applied to [attributes]
                   below, which is a [list] in the second case (similar to
                   {!expression_desc.Texp_match.effect_cases}).
           *)
-        attributes: (not_available, Typedtree.attributes) ocaml_520;
+        attributes: (not_available, Typedtree.attributes) ocaml_502;
         (** [attributes] is just used in untypeast. *)
       }
       (** The function body binds a final argument in [Tfunction_cases],
@@ -787,15 +787,15 @@ and class_expr_desc =
         c: Typedtree.class_expr;
         args:
           ( Asttypes.arg_label
-          * (Typedtree.expression option, Typedtree.apply_arg) ocaml_540
+          * (Typedtree.expression option, Typedtree.apply_arg) ocaml_504
           ) list;
-            (** NB: The argument's values are of [ocaml_540] type. Because
+            (** NB: The argument's values are of [ocaml_504] type. Because
                 it is an [option] in one case, and [apply_arg] (semantically
                 equivalent to option) in the other, the field could be
                 reduced to an [apply_arg] in all cases, with [None]
                 translated to [Omitted ()], and [Some e] to [Arg e].
                 This reduction would avoid an extra wrapping.
-                This is kept as an [ocaml_540] for now for the sake of
+                This is kept as an [ocaml_504] for now for the sake of
                 documenting changes in the type.
                 This is the same reasoning as for
                 {!expression_desc.Texp_match.effect_cases}.
@@ -1053,7 +1053,7 @@ and structure_item_desc =
 and module_binding = {
   mb_id: Ident.t option;
   mb_name: string option Asttypes.loc;
-  mb_uid: (not_available, Shape.Uid.t) ocaml_520;
+  mb_uid: (not_available, Shape.Uid.t) ocaml_502;
   mb_presence: Types.module_presence;
   mb_expr: Typedtree.module_expr;
   mb_attributes: Typedtree.attributes;
@@ -1064,7 +1064,7 @@ and value_binding = {
   vb_pat: Typedtree.pattern;
   vb_expr: Typedtree.expression;
   vb_rec_kind:
-    (not_available, Vaast_OCaml.Value_rec_types.recursive_binding_kind) ocaml_520;
+    (not_available, Vaast_OCaml.Value_rec_types.recursive_binding_kind) ocaml_502;
   vb_attributes: Typedtree.attributes;
   vb_loc: Location.t;
 }
@@ -1199,7 +1199,7 @@ and signature_item_desc =
 and module_declaration = {
   md_id: Ident.t option;
   md_name: string option Asttypes.loc;
-  md_uid: (not_available, Shape.Uid.t) ocaml_520;
+  md_uid: (not_available, Shape.Uid.t) ocaml_502;
   md_presence: Types.module_presence;
   md_type: Typedtree.module_type;
   md_attributes: Typedtree.attributes;
@@ -1209,7 +1209,7 @@ and module_declaration = {
 and module_substitution = {
   ms_id: Ident.t;
   ms_name: string Asttypes.loc;
-  ms_uid: (not_available, Shape.Uid.t) ocaml_520;
+  ms_uid: (not_available, Shape.Uid.t) ocaml_502;
   ms_manifest: Path.t;
   ms_txt: Longident.t Asttypes.loc;
   ms_attributes: Typedtree.attributes;
@@ -1219,7 +1219,7 @@ and module_substitution = {
 and module_type_declaration = {
   mtd_id: Ident.t;
   mtd_name: string Asttypes.loc;
-  mtd_uid: (not_available, Shape.Uid.t) ocaml_520;
+  mtd_uid: (not_available, Shape.Uid.t) ocaml_502;
   mtd_type: Typedtree.module_type option;
   mtd_attributes: Typedtree.attributes;
   mtd_loc: Location.t;
@@ -1311,7 +1311,7 @@ and core_type_desc =
       (** [(t1, ..., tn) #t] *)
   | Ttyp_alias of {
         type_: Typedtree.core_type;
-        name: (string, string Asttypes.loc) ocaml_520;
+        name: (string, string Asttypes.loc) ocaml_502;
       }
       (** [t as name] *)
   | Ttyp_variant of {
@@ -1365,7 +1365,7 @@ and core_type_desc =
 and package_type = {
   pack_path: Path.t;
   pack_fields: (Longident.t Asttypes.loc * Typedtree.core_type) list;
-  pack_type: (Types.module_type, Vaast_OCaml.Types.package) ocaml_550;
+  pack_type: (Types.module_type, Vaast_OCaml.Types.package) ocaml_505;
   pack_txt: Longident.t Asttypes.loc;
 }
 
@@ -1443,9 +1443,9 @@ and type_kind =
 and label_declaration = {
   ld_id: Ident.t;
   ld_name: string Asttypes.loc;
-  ld_uid: (not_available, Shape.Uid.t) ocaml_520;
+  ld_uid: (not_available, Shape.Uid.t) ocaml_502;
   ld_mutable: Asttypes.mutable_flag;
-  ld_atomic: (not_available, Vaast_OCaml.Asttypes.atomic_flag) ocaml_540;
+  ld_atomic: (not_available, Vaast_OCaml.Asttypes.atomic_flag) ocaml_504;
   ld_type: Typedtree.core_type;
   ld_loc: Location.t;
   ld_attributes: Typedtree.attributes;
@@ -1454,7 +1454,7 @@ and label_declaration = {
 and constructor_declaration = {
   cd_id: Ident.t;
   cd_name: string Asttypes.loc;
-  cd_uid: (not_available, Shape.Uid.t) ocaml_520;
+  cd_uid: (not_available, Shape.Uid.t) ocaml_502;
   cd_vars: string Asttypes.loc list;
   cd_args: constructor_arguments;
   cd_res: Typedtree.core_type option;
@@ -1599,7 +1599,7 @@ and 'a class_infos = {
   ci_id_class: Ident.t;
   ci_id_class_type: Ident.t;
   ci_id_object: Ident.t;
-  ci_id_typehash: (Ident.t, not_available) ocaml_510;
+  ci_id_typehash: (Ident.t, not_available) ocaml_501;
   ci_expr: 'a;
   ci_decl: Types.class_declaration;
   ci_type_decl: Types.class_type_declaration;
