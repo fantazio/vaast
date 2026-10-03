@@ -21,11 +21,11 @@ let of_computation : OCaml.computation -> computation = Fun.id
 (** CAUTION: [of_tuple_field] has a version-dependent type *)
 #if OCAML_VERSION < (5, 4, 0)
 let of_tuple_field content =
-  let label = not_available until_540 in
+  let label = not_available until_504 in
   { label; content }
 #elif OCAML_VERSION >= (5, 4, 0)
 let of_tuple_field (label, content) =
-  let label = since_540 label in
+  let label = since_504 label in
   { label; content }
 #endif
 
@@ -34,9 +34,9 @@ let of_tuple_fields fields = List.map of_tuple_field fields
 (** CAUTION: [of_arg] has a version-dependent type *)
 let of_arg (l, arg) =
   #if OCAML_VERSION < (5, 4, 0)
-  let arg = until_540 arg in
+  let arg = until_504 arg in
   #elif OCAML_VERSION >= (5, 4, 0)
-  let arg = since_540 arg in
+  let arg = since_504 arg in
   #endif
   (l, arg)
 
@@ -64,11 +64,11 @@ and of_pat_extra : OCaml.pat_extra -> pat_extra = function
   | Tpat_open (path, longid, env) -> Tpat_open { path; longid; env }
   #if OCAML_VERSION < (5, 5, 0)
   | Tpat_unpack ->
-      let pack_type = not_available until_550 in
+      let pack_type = not_available until_505 in
       Tpat_unpack { pack_type }
   #elif OCAML_VERSION >= (5, 5, 0)
   | Tpat_unpack pack_type ->
-      let pack_type = since_550 pack_type in
+      let pack_type = since_505 pack_type in
       Tpat_unpack { pack_type }
   #endif
 
@@ -77,27 +77,27 @@ and of_pattern_desc : type k . k OCaml.pattern_desc -> k pattern_desc = function
   | Tpat_any -> Tpat_any
   #if OCAML_VERSION < (5, 2, 0)
   | Tpat_var (id, name) ->
-      let uid = not_available until_520 in
+      let uid = not_available until_502 in
       Tpat_var { id; name; uid }
   #elif OCAML_VERSION >= (5, 2, 0)
   | Tpat_var (id, name, uid) ->
-      let uid = since_520 uid in
+      let uid = since_502 uid in
       Tpat_var { id; name; uid }
   #endif
   #if OCAML_VERSION < (5, 2, 0)
   | Tpat_alias (pat, id, name) ->
-      let uid = not_available until_520 in
-      let var_type = not_available until_540 in
+      let uid = not_available until_502 in
+      let var_type = not_available until_504 in
       Tpat_alias { pat; id; name; uid; var_type }
   #elif OCAML_VERSION >= (5, 2, 0) && OCAML_VERSION < (5, 4, 0)
   | Tpat_alias (pat, id, name, uid) ->
-      let uid = since_520 uid in
-      let var_type = not_available until_540 in
+      let uid = since_502 uid in
+      let var_type = not_available until_504 in
       Tpat_alias { pat; id; name; uid; var_type }
   #elif OCAML_VERSION >= (5, 4, 0)
   | Tpat_alias (pat, id, name, uid, var_type) ->
-      let uid = since_520 uid in
-      let var_type = since_540 var_type in
+      let uid = since_502 uid in
+      let var_type = since_504 var_type in
       Tpat_alias { pat; id; name; uid; var_type }
   #endif
   | Tpat_constant const -> Tpat_constant { const }
@@ -112,11 +112,11 @@ and of_pattern_desc : type k . k OCaml.pattern_desc -> k pattern_desc = function
   | Tpat_record (fields, closed) -> Tpat_record { fields; closed }
   #if OCAML_VERSION < (5, 4, 0)
   | Tpat_array cells ->
-      let mut = not_available until_540 in
+      let mut = not_available until_504 in
       Tpat_array { mut; cells }
   #elif OCAML_VERSION >= (5, 4, 0)
   | Tpat_array (mut, cells) ->
-      let mut = since_540 mut in
+      let mut = since_504 mut in
       Tpat_array { mut; cells }
   #endif
   | Tpat_lazy pat -> Tpat_lazy { pat }
@@ -153,18 +153,18 @@ and of_expression_desc : OCaml.expression_desc -> expression_desc = function
   | Texp_let (rec_, bindings, in_) -> Texp_let { rec_; bindings; in_ }
   #if OCAML_VERSION < (5, 2, 0)
   | Texp_function { arg_label; param; cases; partial } ->
-      let params = until_520 arg_label in
+      let params = until_502 arg_label in
       let partial = of_partial partial in
-      let loc = not_available until_520 in
-      let exp_extra = not_available until_520 in
-      let attributes = not_available until_520 in
+      let loc = not_available until_502 in
+      let exp_extra = not_available until_502 in
+      let attributes = not_available until_502 in
       let body =
         Tfunction_cases { cases; partial; param; loc; exp_extra; attributes }
       in
       Texp_function { params; body }
   #elif OCAML_VERSION >= (5, 2, 0)
   | Texp_function (params, body) ->
-      let params = since_520 params in
+      let params = since_502 params in
       let body = of_function_body body in
       Texp_function { params; body }
   #endif
@@ -173,22 +173,22 @@ and of_expression_desc : OCaml.expression_desc -> expression_desc = function
       Texp_apply { f; args }
   #if OCAML_VERSION < (5, 3, 0)
   | Texp_match (expr, cases, partial) ->
-      let effect_cases = not_available until_530 in
+      let effect_cases = not_available until_503 in
       let partial = of_partial partial in
       Texp_match { expr; cases; effect_cases; partial }
   #elif OCAML_VERSION >= (5, 3, 0)
   | Texp_match (expr, cases, effect_cases, partial) ->
-      let effect_cases = since_530 effect_cases in
+      let effect_cases = since_503 effect_cases in
       let partial = of_partial partial in
       Texp_match { expr; cases; effect_cases; partial }
   #endif
   #if OCAML_VERSION < (5, 3, 0)
   | Texp_try (expr, cases) ->
-      let effect_cases = not_available until_530 in
+      let effect_cases = not_available until_503 in
       Texp_try { expr; cases; effect_cases }
   #elif OCAML_VERSION >= (5, 3, 0)
   | Texp_try (expr, cases, effect_cases) ->
-      let effect_cases = since_530 effect_cases in
+      let effect_cases = since_503 effect_cases in
       Texp_try { expr; cases; effect_cases }
   #endif
   | Texp_tuple fields ->
@@ -209,11 +209,11 @@ and of_expression_desc : OCaml.expression_desc -> expression_desc = function
       Texp_setfield { record; longid; desc; expr }
   #if OCAML_VERSION < (5, 4, 0)
   | Texp_array cells ->
-      let mut = not_available until_540 in
+      let mut = not_available until_504 in
       Texp_array { mut; cells }
   #elif OCAML_VERSION >= (5, 4, 0)
   | Texp_array (mut, cells) ->
-      let mut = since_540 mut in
+      let mut = since_504 mut in
       Texp_array { mut; cells }
   #endif
   | Texp_ifthenelse (cond, then_, else_) ->
@@ -234,11 +234,11 @@ and of_expression_desc : OCaml.expression_desc -> expression_desc = function
       Texp_override { class_path; instvar_changes }
   #if OCAML_VERSION < (5, 1, 0)
   | Texp_assert expr ->
-      let loc = not_available until_510 in
+      let loc = not_available until_501 in
       Texp_assert { expr; loc }
   #elif OCAML_VERSION >= (5, 1, 0)
   | Texp_assert (expr, loc) ->
-      let loc = since_510 loc in
+      let loc = since_501 loc in
       Texp_assert { expr; loc }
   #endif
   | Texp_lazy expr ->
@@ -258,19 +258,19 @@ and of_expression_desc : OCaml.expression_desc -> expression_desc = function
       let texp_struct_item =
         Texp_letmodule { id; name; presence; mod_expr }
       in
-      let struct_item = until_550 texp_struct_item in
+      let struct_item = until_505 texp_struct_item in
       Texp_struct_item { struct_item; in_ }
   | Texp_letexception (extension_ctor, in_) ->
       let texp_struct_item = Texp_letexception { extension_ctor } in
-      let struct_item = until_550 texp_struct_item in
+      let struct_item = until_505 texp_struct_item in
       Texp_struct_item { struct_item; in_ }
   | Texp_open (open_decl, in_) ->
       let texp_struct_item = Texp_open { open_decl } in
-      let struct_item = until_550 texp_struct_item in
+      let struct_item = until_505 texp_struct_item in
       Texp_struct_item { struct_item; in_ }
   #elif OCAML_VERSION >= (5, 5, 0)
   | Texp_struct_item (struct_item, in_) ->
-      let struct_item = since_550 struct_item in
+      let struct_item = since_505 struct_item in
       Texp_struct_item { struct_item; in_ }
   #endif
 
@@ -282,9 +282,9 @@ and of_meth : OCaml.meth -> meth = function
 and of_case : 'k . 'k OCaml.case -> 'k case = fun case ->
   let c_lhs = case.c_lhs in
   #if OCAML_VERSION < (5, 3, 0)
-  let c_cont = not_available until_530 in
+  let c_cont = not_available until_503 in
   #elif OCAML_VERSION >= (5, 3, 0)
-  let c_cont = since_530 case.c_cont in
+  let c_cont = since_503 case.c_cont in
   #endif
   let c_guard = case.c_guard in
   let c_rhs = case.c_rhs in
@@ -310,9 +310,9 @@ and of_function_body : OCaml.function_body -> function_body = function
       Tfunction_body { expr }
   | Tfunction_cases { cases; partial; param; loc; exp_extra; attributes } ->
       let partial = of_partial partial in
-      let loc = since_520 loc in
-      let exp_extra = since_520 exp_extra in
-      let attributes = since_520 attributes in
+      let loc = since_502 loc in
+      let exp_extra = since_502 exp_extra in
+      let attributes = since_502 attributes in
       Tfunction_cases { cases; partial; param; loc; exp_extra; attributes }
 
 and of_record_label_definition :
@@ -468,9 +468,9 @@ and of_module_binding : OCaml.module_binding -> module_binding = fun mb ->
   let mb_id = mb.mb_id in
   let mb_name = mb.mb_name in
   #if OCAML_VERSION < (5, 2, 0)
-  let mb_uid = not_available until_520 in
+  let mb_uid = not_available until_502 in
   #elif OCAML_VERSION >= (5, 2, 0)
-  let mb_uid = since_520 mb.mb_uid in
+  let mb_uid = since_502 mb.mb_uid in
   #endif
   let mb_presence = mb.mb_presence in
   let mb_expr = mb.mb_expr in
@@ -482,9 +482,9 @@ and of_value_binding : OCaml.value_binding -> value_binding = fun vb ->
   let vb_pat = vb.vb_pat in
   let vb_expr = vb.vb_expr in
   #if OCAML_VERSION < (5, 2, 0)
-  let vb_rec_kind = not_available until_520 in
+  let vb_rec_kind = not_available until_502 in
   #elif OCAML_VERSION >= (5, 2, 0)
-  let vb_rec_kind = since_520 vb.vb_rec_kind in
+  let vb_rec_kind = since_502 vb.vb_rec_kind in
   #endif
   let vb_attributes = vb.vb_attributes in
   let vb_loc = vb.vb_loc in
@@ -572,9 +572,9 @@ and of_module_declaration : OCaml.module_declaration -> module_declaration =
   let md_id = md.md_id in
   let md_name = md.md_name in
   #if OCAML_VERSION < (5, 2, 0)
-  let md_uid = not_available until_520 in
+  let md_uid = not_available until_502 in
   #elif OCAML_VERSION >= (5, 2, 0)
-  let md_uid = since_520 md.md_uid in
+  let md_uid = since_502 md.md_uid in
   #endif
   let md_presence = md.md_presence in
   let md_type = md.md_type in
@@ -587,9 +587,9 @@ and of_module_substitution : OCaml.module_substitution -> module_substitution =
   let ms_id = ms.ms_id in
   let ms_name = ms.ms_name in
   #if OCAML_VERSION < (5, 2, 0)
-  let ms_uid = not_available until_520 in
+  let ms_uid = not_available until_502 in
   #elif OCAML_VERSION >= (5, 2, 0)
-  let ms_uid = since_520 ms.ms_uid in
+  let ms_uid = since_502 ms.ms_uid in
   #endif
   let ms_manifest = ms.ms_manifest in
   let ms_txt = ms.ms_txt in
@@ -602,9 +602,9 @@ and of_module_type_declaration:
   fun mtd ->
   let mtd_id = mtd.mtd_id in
   #if OCAML_VERSION < (5, 2, 0)
-  let mtd_uid = not_available until_520 in
+  let mtd_uid = not_available until_502 in
   #elif OCAML_VERSION >= (5, 2, 0)
-  let mtd_uid = since_520 mtd.mtd_uid in
+  let mtd_uid = since_502 mtd.mtd_uid in
   #endif
   let mtd_name = mtd.mtd_name in
   let mtd_type = mtd.mtd_type in
@@ -678,9 +678,9 @@ and of_core_type_desc : OCaml.core_type_desc -> core_type_desc = function
   | Ttyp_class (path, longid, params) -> Ttyp_class { path; longid; params }
   | Ttyp_alias (type_, name) ->
       #if OCAML_VERSION < (5, 2, 0)
-      let name = until_520 name in
+      let name = until_502 name in
       #elif OCAML_VERSION >= (5, 2, 0)
-      let name = since_520 name in
+      let name = since_502 name in
       #endif
       Ttyp_alias { type_; name }
   | Ttyp_variant (rows, closed, labels) ->
@@ -717,9 +717,9 @@ and of_package_type : OCaml.package_type -> package_type = fun pt ->
   #endif
   (* version-dependent field type *)
   #if OCAML_VERSION < (5, 5, 0)
-  let pack_type = until_550 pack_type in
+  let pack_type = until_505 pack_type in
   #elif OCAML_VERSION >= (5, 5, 0)
-  let pack_type = since_550 pack_type in
+  let pack_type = since_505 pack_type in
   #endif
   { pack_path; pack_fields; pack_type; pack_txt }
 
@@ -797,15 +797,15 @@ and of_label_declaration : OCaml.label_declaration -> label_declaration =
   let ld_id = ld.ld_id in
   let ld_name = ld.ld_name in
   #if OCAML_VERSION < (5, 2, 0)
-  let ld_uid = not_available until_520 in
+  let ld_uid = not_available until_502 in
   #elif OCAML_VERSION >= (5, 2, 0)
-  let ld_uid = since_520 ld.ld_uid in
+  let ld_uid = since_502 ld.ld_uid in
   #endif
   let ld_mutable = ld.ld_mutable in
   #if OCAML_VERSION < (5, 4, 0)
-  let ld_atomic = not_available until_540 in
+  let ld_atomic = not_available until_504 in
   #elif OCAML_VERSION >= (5, 4, 0)
-  let ld_atomic = since_540 ld.ld_atomic in
+  let ld_atomic = since_504 ld.ld_atomic in
   #endif
   let ld_type = ld.ld_type in
   let ld_loc = ld.ld_loc in
@@ -826,9 +826,9 @@ and of_constructor_declaration :
   let cd_id = cd.cd_id in
   let cd_name = cd.cd_name in
   #if OCAML_VERSION < (5, 2, 0)
-  let cd_uid = not_available until_520 in
+  let cd_uid = not_available until_502 in
   #elif OCAML_VERSION >= (5, 2, 0)
-  let cd_uid = since_520 cd.cd_uid in
+  let cd_uid = since_502 cd.cd_uid in
   #endif
   let cd_vars = cd.cd_vars in
   let cd_args = of_constructor_arguments cd.cd_args in
@@ -951,9 +951,9 @@ and of_class_infos :
   let ci_id_class_type = ci.ci_id_class_type in
   let ci_id_object = ci.ci_id_object in
   #if OCAML_VERSION < (5, 1, 0)
-  let ci_id_typehash = until_510 ci.ci_id_typehash in
+  let ci_id_typehash = until_501 ci.ci_id_typehash in
   #elif OCAML_VERSION >= (5, 1, 0)
-  let ci_id_typehash = not_available since_510 in
+  let ci_id_typehash = not_available since_501 in
   #endif
   let ci_expr = of_ci_expr ci.ci_expr in
   let ci_decl = ci.ci_decl in

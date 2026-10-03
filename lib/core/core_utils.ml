@@ -5,20 +5,20 @@ open Core_intf
 let until_500 x = Until_500 x
 let since_500 x = Since_500 x
 
-let until_510 x = Until_510 x
-let since_510 x = Since_510 x
+let until_501 x = Until_501 x
+let since_501 x = Since_501 x
 
-let until_520 x = Until_520 x
-let since_520 x = Since_520 x
+let until_502 x = Until_502 x
+let since_502 x = Since_502 x
 
-let until_530 x = Until_530 x
-let since_530 x = Since_530 x
+let until_503 x = Until_503 x
+let since_503 x = Since_503 x
 
-let until_540 x = Until_540 x
-let since_540 x = Since_540 x
+let until_504 x = Until_504 x
+let since_504 x = Since_504 x
 
-let until_550 x = Until_550 x
-let since_550 x = Since_550 x
+let until_505 x = Until_505 x
+let since_505 x = Since_505 x
 
 let not_available version = version NA
 
@@ -29,26 +29,26 @@ let get_since_500 = function
   | Until_500 NA -> assert false
   | Since_500 x -> x
 
-let get_until_510 = function
-  | Until_510 x -> x
-  | Since_510 NA -> assert false
+let get_until_501 = function
+  | Until_501 x -> x
+  | Since_501 NA -> assert false
 
-let get_since_510 = function
-  | Until_510 NA -> assert false
-  | Since_510 x -> x
+let get_since_501 = function
+  | Until_501 NA -> assert false
+  | Since_501 x -> x
 
-let get_since_520 = function
-  | Until_520 NA -> assert false
-  | Since_520 x -> x
+let get_since_502 = function
+  | Until_502 NA -> assert false
+  | Since_502 x -> x
 
-let get_since_530 = function
-  | Until_530 NA -> assert false
-  | Since_530 x -> x
+let get_since_503 = function
+  | Until_503 NA -> assert false
+  | Since_503 x -> x
 
-let get_since_540 = function
-  | Until_540 NA -> assert false
-  | Since_540 x -> x
+let get_since_504 = function
+  | Until_504 NA -> assert false
+  | Since_504 x -> x
 
-let get_since_550 = function
-  | Until_550 NA -> assert false
-  | Since_550 x -> x
+let get_since_505 = function
+  | Until_505 NA -> assert false
+  | Since_505 x -> x
