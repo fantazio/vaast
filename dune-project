@@ -4,7 +4,7 @@
 
 (generate_opam_files true)
 
-(version 0.0.1~design1.2)
+(version 0.0.0)
 
 (maintainers
  "Corentin De Souza <corentin@fantazio.eu>"
@@ -19,7 +19,7 @@
 
 (package
  (name vaast)
- (synopsis "Typedtree for all versions")
+ (synopsis "Version-agnostic Typedtree for OCaml")
  (license MIT)
  (depends
   (ocaml (and (>= 4.14) (< 5.6)))
